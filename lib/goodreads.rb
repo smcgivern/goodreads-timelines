@@ -1,11 +1,19 @@
+require 'date'
+require 'fileutils'
+require 'open-uri'
+
 require 'addressable/template'
 require 'nokogiri'
-require 'open-uri'
-require 'date'
 
 module Goodreads
+  OPTIONS = {
+    :requests_per_second => 1,
+    :page_size => 200,
+    :cache_for => 24 * 60 * 60,
+    :cache_dir => File.join(File.dirname(__FILE__), '../cache'),
+  }
+
   API_KEY = open('goodreads.key').read.strip
-  PAGE_SIZE = 200
   DATE_FORMAT = '%a %b %d %H:%M:%S %Z %Y'
 
   ADDRESSES = {
@@ -15,25 +23,55 @@ module Goodreads
     },
   }
 
+  def self.limit_rate(options=OPTIONS)
+  end
+
+  def self.cache_to(filename, options=OPTIONS)
+    if options[:cache_dir]
+      FileUtils.mkdir_p(options[:cache_dir])
+
+      cache_file = File.join(options[:cache_dir], filename)
+
+      if File.exist?(cache_file)
+        if File.mtime(cache_file) < Time.now + options[:cache_for]
+          return open(cache_file)
+        else
+          File.delete(cache_file)
+        end
+      end
+    end
+
+    block_return = yield
+
+    open(cache_file, 'w').puts(block_return) if options[:cache_dir]
+  end
+
   # Picks the page number of user_id's reviews using the Goodreads
   # API.
-  def self.list_page(user_id, page=1)
-    address = ADDRESSES[:review][:list].expand('user_id' => user_id,
-                                               'api_key' => API_KEY,
-                                               'page' => page,
-                                               'page_size' => PAGE_SIZE)
+  def self.list_page(user_id, page=1, options=OPTIONS)
+    review_list = cache_to("review_list_#{user_id}.xml") do
+      expansions = {
+        'user_id' => user_id,
+        'api_key' => API_KEY,
+        'page' => page,
+        'page_size' => options[:page_size],
+      }
 
-    Nokogiri::XML(open(address))
+      limit_rate
+      open(ADDRESSES[:review][:list].expand(expansions)).read
+    end
+
+    Nokogiri::XML(review_list)
   end
 
   # Gets all reviews for the specified user ID, using #list_page. If
   # there's more than one page, adds them all to the array.
-  def self.all_reviews(user_id)
+  def self.all_reviews(user_id, options=OPTIONS)
     reviews = list_page(user_id).at('reviews')
 
     # Are there more books than fit on this page?
     if reviews['end'] != reviews['total']
-      pages = (reviews['total'].to_i / PAGE_SIZE.to_f).ceil
+      pages = (reviews['total'].to_i / options[:page_size].to_f).ceil
 
       2.upto(pages) {|i| reviews << list_page(user_id, i).at('reviews')}
     end
