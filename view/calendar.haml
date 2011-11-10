@@ -30,6 +30,6 @@
               %dl
                 %img{:width => 20, :height => 30,
                      :src => review.at('small_image_url').inner_text,
-                     :alt => review.at('title').inner_text}
+                     :alt => review.at('title').inner_text.strip}
         - (escape = true; break) if point >= offset + last.day
     - break if escape
