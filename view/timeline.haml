@@ -1,0 +1,21 @@
+!!!
+%html
+  %head
+    %title
+      Goodreads timeline for user ID
+      = @user_id
+  %body
+    %h1
+      Goodreads timeline for user ID
+      %a{:href => ""}= @user_id
+    %p
+      They have read
+      = @all_reviews.search('review').length
+      books over
+      = (@by_date.keys.max - @by_date.keys.min)
+      days from
+      = @by_date.keys.min
+      to
+      = @by_date.keys.max.to_s + '.'
+    - @by_month.keys.sort.each do |month|
+      = partial(:calendar, {:reviews => @by_month[month]})
