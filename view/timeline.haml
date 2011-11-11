@@ -18,4 +18,4 @@
       to
       = @by_date.keys.max.to_s + '.'
     - @by_month.keys.sort.each do |month|
-      = partial(:calendar, {:reviews => @by_month[month]})
+      = partial(:_calendar, {:reviews => @by_month[month]})
