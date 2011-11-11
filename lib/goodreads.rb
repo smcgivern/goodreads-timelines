@@ -7,7 +7,7 @@ require 'nokogiri'
 
 module Goodreads
   OPTIONS = {
-    :requests_per_second => 1,
+    :between_requests => 1,
     :page_size => 200,
     :cache_for => 24 * 60 * 60,
     :cache_dir => File.join(File.dirname(__FILE__), '../cache'),
@@ -23,7 +23,15 @@ module Goodreads
     },
   }
 
-  def self.limit_rate(options=OPTIONS)
+  def self.ago(s); Time.now - s; end
+
+  def self.limit_rate(meth, options=OPTIONS)
+    @@last_call ||= {}
+    @@last_call[meth] ||= ago(2 * options[:between_requests])
+
+    sleep(1) while @@last_call[meth] > ago(options[:between_requests])
+
+    @@last_call[meth] = Time.now
   end
 
   def self.cache_to(filename, options=OPTIONS)
@@ -33,7 +41,7 @@ module Goodreads
       cache_file = File.join(options[:cache_dir], filename)
 
       if File.exist?(cache_file)
-        if File.mtime(cache_file) < Time.now + options[:cache_for]
+        if File.mtime(cache_file) > ago(options[:cache_for])
           return open(cache_file)
         else
           File.delete(cache_file)
@@ -44,12 +52,14 @@ module Goodreads
     block_return = yield
 
     open(cache_file, 'w').puts(block_return) if options[:cache_dir]
+
+    block_return
   end
 
   # Picks the page number of user_id's reviews using the Goodreads
   # API.
   def self.list_page(user_id, page=1, options=OPTIONS)
-    review_list = cache_to("review_list_#{user_id}.xml") do
+    review_list = cache_to("review_list_#{user_id}.xml", options) do
       expansions = {
         'user_id' => user_id,
         'api_key' => API_KEY,
@@ -57,7 +67,7 @@ module Goodreads
         'page_size' => options[:page_size],
       }
 
-      limit_rate
+      limit_rate(:list_page, options)
       open(ADDRESSES[:review][:list].expand(expansions)).read
     end
 
