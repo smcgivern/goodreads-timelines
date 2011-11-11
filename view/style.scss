@@ -1,0 +1,46 @@
+body {
+    font-family: "Palatino Linotype", "Palatino", "URW Palladio L", "Book Antiqua", "Baskerville", "Bitstream Charter", "Garamond", "Georgia", serif;
+    font-size: 105%;
+    color: #000;
+    background: #fff;
+    line-height: 2em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: "Gill Sans", "Gill Sans MT", "GillSans", "Calibri", "Trebuchet MS", sans-serif;
+    text-align: center;
+}
+
+:link,:link:active,:link:hover, .click {
+    color: #0000ff;
+    background: transparent;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+:link:visited {
+    color: #800080;
+    background: transparent;
+}
+
+thead {
+    text-align: center;
+    font-weight: bold;
+}
+
+td {
+    border: 1px solid black;
+    vertical-align: top;
+    width: 4em;
+    padding: 0em 0.2em;
+}
+
+td div.date {
+    float: right;
+    height: 2em;
+}
+
+td div.reviews {
+    clear: right;
+    min-height: 2em;
+}

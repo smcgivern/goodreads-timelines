@@ -10,6 +10,8 @@ helpers do
   end
 end
 
+get('/ext/style.css') {scss(:style)}
+
 get('/::user_id/?') do
   @user_id = params['user_id']
   @all_reviews = Goodreads.all_reviews(@user_id)
