@@ -22,6 +22,19 @@ end
 
 get('/ext/style.css') {scss(:style)}
 
+get('/') do
+  @page_title = 'Goodreads timelines'
+  @scripts = ['/ext/jquery-1.7.min.js', '/ext/index.js']
+
+  haml(:index)
+end
+
+post('/go-to-timeline/?') do
+  user_id = Goodreads.find_user_id(params['goodreads-uri'])
+
+  redirect(r("/:#{user_id}/"))
+end
+
 get('/::user_id/?') do
   @user_id = params['user_id']
   @user_info = Goodreads.user_info(@user_id)

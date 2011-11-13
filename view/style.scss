@@ -1,8 +1,14 @@
-body {
+body, input {
     font-family: "Palatino Linotype", "Palatino", "URW Palladio L", "Book Antiqua", "Baskerville", "Bitstream Charter", "Garamond", "Georgia", serif;
     font-size: 105%;
     color: #000;
     background: #fff;
+}
+
+body {
+    margin: 0em auto;
+    padding: 0em 1em;
+    max-width: 50em;
     line-height: 2em;
 }
 
@@ -21,6 +27,15 @@ h1, h2, h3, h4, h5, h6 {
 :link:visited {
     color: #800080;
     background: transparent;
+}
+
+ol li {
+    list-style-type: lower-alpha;
+}
+
+input#go {
+    color: #fff;
+    background: #22bd0d;
 }
 
 table {
@@ -47,8 +62,10 @@ td div.date {
     padding-right: 0.2em;
 }
 
-td div.reviews {
-    clear: right;
-    min-height: 2em;
-    padding: 0.2em;
+
+#byline {
+    clear: both;
+    text-align: right;
+    font-size: 75%;
+    font-style: italic;
 }
