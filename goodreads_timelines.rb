@@ -1,3 +1,8 @@
+require 'bundler/setup'
+require 'lib/goodreads'
+require 'sinatra'
+require 'json'
+
 set(:views, Proc.new {File.join(root, 'view')})
 set(:haml, :format => :html5)
 
