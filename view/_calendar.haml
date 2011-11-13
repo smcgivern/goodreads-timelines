@@ -1,12 +1,13 @@
 - first = reviews.keys.sort.first
 - last = reviews.keys.sort.last
 - offset = first.wday
-- escape = false
+- calendar_id = "calendar-#{first.strftime('%Y-%m')}"
 - point = 0
-%table.calendar{:id => "calendar-#{first.strftime("%Y-%m")}"}
+%table.calendar{:id => calendar_id}
   %caption
     %h3
-      = first.strftime("%B %Y")
+      %a{:href => "##{calendar_id}"}<
+        = first.strftime("%B %Y")
       = "(#{reviews.values.flatten.size})"
   %thead
     %tr
@@ -18,20 +19,18 @@
       %td F
       %td S
   %tbody
-  - 0.upto(5) do |week|
-    %tr{:id => "week-#{week+1}"}
-      - 0.upto(6) do |day|
-        - point = (week * 7) + day
-        %td
-          - if (point + 1).between?(offset + first.day, offset + last.day)
-            - day = first + point - offset
-            %div.date= day.strftime("%d")
-            %div.reviews
-              - reviews[day].each do |review|
-                - title = review.at('title').inner_text.strip
-                %a{:href => review.at('link').inner_text.strip,
-                   :title => title}<
-                  %img{:width => 30, :height => 45,
-                       :src => review.at('small_image_url').inner_text,
-                       :alt => title}
-    - break if point >= offset + last.day - 1
+    - 0.upto(5) do |week|
+      %tr{:id => "#{calendar_id}-week-#{week+1}"}
+        - 0.upto(6) do |day|
+          - point = (week * 7) + day
+          %td
+            - if (point + 1).between?(offset + first.day, offset + last.day)
+              - day = first + point - offset
+              .date= day.strftime("%e")
+              .reviews<
+                - reviews[day].each do |review|
+                  - title = t(review.at('title'))
+                  %a{:href => t(review.at('link')), :title => title}<
+                    %img{:width => 30, :height => 45, :alt => title,
+                         :src => t(review.at('small_image_url'))}
+      - break if point >= offset + last.day - 1
