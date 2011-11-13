@@ -45,15 +45,32 @@ get('/::user_id/?') do
   @user_info = Goodreads.user_info(@user_id)
   @all_reviews = Goodreads.all_reviews(@user_id)
   @by_day = Goodreads.reviews_by_date(@all_reviews)
-
   @by_month = Goodreads.reviews_by_date(@all_reviews, fill=:month)
+
   @by_month = Hash[@by_month.
                    group_by {|d, r| d.strftime("%Y/%m")}.
                    map {|k, v| [k, Hash[v]]}]
 
+  review_to_hash = lambda do |review|
+    {
+      :title => t(review.at('title')),
+      :author => t(review.at('author name')),
+      :pages => t(review.at('num_pages')).to_i,
+    }
+  end
+
+  @by_month_chart = Hash[@by_month.map do |month, days|
+                           [month, Hash[days.map do |day, rs|
+                                          [day,
+                                           rs.map(&review_to_hash)]
+                                        end]]
+                         end].to_json
+
+
   @page_title = "Goodreads timeline for #{@user_id}"
-  @scripts = ['/ext/jquery-1.7.min.js', '/ext/flot.min.js']
   @excanvas = '/ext/excanvas.min.js'
+  @scripts = ['/ext/jquery-1.7.min.js', '/ext/flot.min.js',
+              '/ext/chart.js']
 
   haml(:timeline)
 end

@@ -14,12 +14,22 @@
   ![](#{t(@user_info.at('small_image_url'))}) [#{name}](#{user_link})
   has read #{count} books over #{finish - start} days from #{start} to
   #{finish}. (That's around #{sprintf('%01.2f', per_week)} books per
-  week.)
+  week.) There are [charts](#charts) and [calendars](#calendars)
+  available of their reading history.
   {:#user-info}
 
   They might have read more or less than this -- all this shows is
   what they've entered into [Goodreads](http://www.goodreads.com/).
 
+%h2#charts Charts
+#chart-area
+  %h3#chart-title
+  #chart
+
 %h2#calendars Monthly reading calendars
 - @by_month.keys.sort.each do |month|
   = partial(:_calendar, {:reviews => @by_month[month]})
+
+%script{:type => 'text/javascript'}
+  = surround '  var byMonth = ', ';' do
+    = @by_month_chart
