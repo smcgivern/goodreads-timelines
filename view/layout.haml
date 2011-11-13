@@ -1,0 +1,17 @@
+!!!
+%html
+  %head
+    %title= @page_title
+    %link{:href => r('/ext/style.css'), :rel => 'stylesheet',
+          :type => 'text/css'}
+    -if @excanvas
+      /[if lte IE8]
+        %script{:src => r(@excanvas), :type => 'text/javascript'}
+  %body
+    = yield
+    %div#byline
+      %p
+        By
+        %a{:href => 'http://sean.mcgivern.me.uk/'} Sean McGivern
+    - (@scripts || []).each do |script|
+      %script{:src => r(script), :type => 'text/javascript'}

@@ -1,9 +1,11 @@
 set(:views, Proc.new {File.join(root, 'view')})
+set(:haml, :format => :html5)
 
 ROOT = (File.exist?('.root') ?
         File.open('.root').read.strip : nil)
 
 helpers do
+  # Call a partial HAML template.
   def partial(template, variables={})
     haml(template, {:layout => false}, variables)
   end
