@@ -23,24 +23,32 @@ h1, h2, h3, h4, h5, h6 {
     background: transparent;
 }
 
+table {
+    border-collapse: collapse;
+    border-padding: 0em;
+}
+
 thead {
     text-align: center;
     font-weight: bold;
 }
 
 td {
-    border: 1px solid black;
+    border: 1px solid #000;
     vertical-align: top;
-    width: 4em;
-    padding: 0em 0.2em;
+    width: 4.2em;
+    margin: 0em;
+    padding: 0em;
 }
 
 td div.date {
     float: right;
     height: 2em;
+    padding-right: 0.2em;
 }
 
 td div.reviews {
     clear: right;
     min-height: 2em;
+    padding: 0.2em;
 }
