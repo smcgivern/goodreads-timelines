@@ -1,7 +1,3 @@
-require 'lib/goodreads'
-require 'sinatra'
-require 'sinatra/reloader'
-
 set(:views, Proc.new {File.join(root, 'view')})
 
 ROOT = (File.exist?('.root') ?
