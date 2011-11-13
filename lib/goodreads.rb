@@ -10,7 +10,8 @@ module Goodreads
     :between_requests => 1,
     :page_size => 200,
     :cache_for => 24 * 60 * 60,
-    :cache_dir => File.join(File.dirname(__FILE__), '../cache'),
+    :cache_dir => File.join(File.dirname(__FILE__), '..', 'tmp',
+                            'cache'),
   }
 
   API_KEY = open('goodreads.key').read.strip
@@ -105,7 +106,8 @@ module Goodreads
     reviews.search('review').each do |review|
       next if review.at('read_at').inner_text.empty?
 
-      date = Date.strptime(review.at('read_at').inner_text, DATE_FORMAT)
+      date = Date.strptime(review.at('read_at').inner_text,
+                           DATE_FORMAT)
 
       by_date[date] ||= []
       by_date[date] << review
