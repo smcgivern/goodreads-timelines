@@ -1,3 +1,4 @@
 goodreads.key
 tmp/
 .sass-cache/
+*.rake
