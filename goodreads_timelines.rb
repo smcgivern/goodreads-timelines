@@ -4,9 +4,17 @@ require 'sinatra/reloader'
 
 set(:views, Proc.new {File.join(root, 'view')})
 
+ROOT = (File.exist?('.root') ?
+        File.open('.root').read.strip : nil)
+
 helpers do
   def partial(template, variables={})
     haml(template, {:layout => false}, variables)
+  end
+
+  # Prepend ROOT (from .root, if it exists) to absolute paths.
+  def r(s)
+    (s =~ /^\// && !(s =~ /^\/#{ROOT}/)) ? "/#{ROOT}#{s}" : s
   end
 
   # Take the inner_text and remove surrounding whitespace from a
