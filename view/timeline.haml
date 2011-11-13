@@ -14,10 +14,10 @@
       They have read
       = @all_reviews.search('review').length
       books over
-      = (@by_date.keys.max - @by_date.keys.min)
+      = (@by_day.keys.max - @by_day.keys.min)
       days from
-      = @by_date.keys.min
+      = @by_day.keys.min
       to
-      = @by_date.keys.max.to_s + '.'
+      = @by_day.keys.max.to_s + '.'
     - @by_month.keys.sort.each do |month|
       = partial(:_calendar, {:reviews => @by_month[month]})

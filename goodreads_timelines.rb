@@ -15,9 +15,10 @@ get('/ext/style.css') {scss(:style)}
 get('/::user_id/?') do
   @user_id = params['user_id']
   @all_reviews = Goodreads.all_reviews(@user_id)
-  @by_date = Goodreads.reviews_by_date(@all_reviews, fill=:month)
+  @by_day = Goodreads.reviews_by_date(@all_reviews)
 
-  @by_month = Hash[@by_date.
+  @by_month = Goodreads.reviews_by_date(@all_reviews, fill=:month)
+  @by_month = Hash[@by_month.
                    group_by {|d, r| d.strftime("%Y/%m")}.
                    map {|k, v| [k, Hash[v]]}]
 
