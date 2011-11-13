@@ -1,5 +1,7 @@
 - sean = 'http://www.goodreads.com/user/show/4625510-sean'
+
 %h1 Goodreads timelines
+
 :markdown
   This is a small tool to show timelines of someone's reading on
   [Goodreads](http://www.goodreads.com/). Enter the address of a
@@ -13,6 +15,7 @@
   2. when the site is busy.
 
   Have fun!
+
 %form{:action => r('/go-to-timeline/'), :method => 'POST'}
   %input{:id => 'goodreads-uri', :name => 'goodreads-uri',
          :type => 'url', :size => 60, :value => sean}

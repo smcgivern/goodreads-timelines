@@ -3,12 +3,14 @@
 - offset = first.wday
 - calendar_id = "calendar-#{first.strftime('%Y-%m')}"
 - point = 0
+
 %table.calendar{:id => calendar_id}
   %caption
     %h3
       %a{:href => "##{calendar_id}"}<
         = first.strftime("%B %Y")
       = "(#{reviews.values.flatten.size})"
+
   %thead
     %tr
       %td S
@@ -18,6 +20,7 @@
       %td T
       %td F
       %td S
+
   %tbody
     - 0.upto(5) do |week|
       %tr{:id => "#{calendar_id}-week-#{week+1}"}
