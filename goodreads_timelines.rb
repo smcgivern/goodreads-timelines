@@ -46,5 +46,9 @@ get('/::user_id/?') do
                    group_by {|d, r| d.strftime("%Y/%m")}.
                    map {|k, v| [k, Hash[v]]}]
 
+  @page_title = "Goodreads timeline for #{@user_id}"
+  @scripts = ['/ext/jquery-1.7.min.js', '/ext/flot.min.js']
+  @excanvas = '/ext/excanvas.min.js'
+
   haml(:timeline)
 end
