@@ -16,7 +16,10 @@
 
   Have fun!
 
-%form{:action => r('/go-to-timeline/'), :method => 'POST'}
-  %input{:id => 'goodreads-uri', :name => 'goodreads-uri',
-         :type => 'url', :size => 60, :value => sean}
-  %input{:id => 'go', :type => 'submit', :value => 'Go!'}
+%form#go-to-timeline{:action => r('/go-to-timeline/'),
+                     :method => 'POST'}
+  %p
+    %input#goodreads-uri{:name => 'goodreads-uri', :type => 'url',
+           :size => 60, :value => sean}
+
+    %input#go{:type => 'submit', :value => 'Go!'}
