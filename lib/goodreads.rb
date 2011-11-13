@@ -22,6 +22,12 @@ module Goodreads
       :list =>
       ::Addressable::Template.new('http://www.goodreads.com/review/list/{user_id}.xml?key={api_key}&page={page}&per_page={page_size}&sort=date_read&order=d&shelf=read&v=2'),
     },
+    :user => {
+      :link =>
+      ::Addressable::Template.new('http://www.goodreads.com/user/show/{-list|-|user_info}'),
+      :show =>
+      ::Addressable::Template.new('http://www.goodreads.com/user/show/{user_id}.xml?key={api_key}'),
+    }
   }
 
   def self.ago(s); Time.now - s; end
@@ -57,8 +63,29 @@ module Goodreads
     block_return
   end
 
+  # Links to a user by ID.
+  def self.user_link(user_id)
+    ADDRESSES[:user][:link].expand('user_info' => [user_id.to_s])
+  end
+
+  # Gets a user ID from a URI.
+  def self.find_user_id(address)
+    ADDRESSES[:user][:link].extract(address)['user_info'].first
+  end
+
+  # Gets the user's info from user.show.
+  def self.user_info(user_id, options=OPTIONS)
+    user_show = cache_to("user_show_#{user_id}.xml", options) do
+      open(ADDRESSES[:user][:show].expand('user_id' => user_id,
+                                          'api_key' => API_KEY)).
+        read
+    end
+
+    Nokogiri::XML(user_show)
+  end
+
   # Picks the page number of user_id's reviews using the Goodreads
-  # API.
+  # API's review.list method.
   def self.list_page(user_id, page=1, options=OPTIONS)
     review_list = cache_to("review_list_#{user_id}.xml", options) do
       expansions = {

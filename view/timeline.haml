@@ -1,23 +1,21 @@
-!!!
-%html
-  %head
-    %title
-      Goodreads timeline for user ID
-      = @user_id
-    %link{:href => '/ext/style.css', :rel => 'stylesheet',
-          :type => 'text/css'}
-  %body
-    %h1
-      Goodreads timeline for user ID
-      %a{:href => ""}= @user_id
-    %p
-      They have read
-      = @all_reviews.search('review').length
-      books over
-      = (@by_day.keys.max - @by_day.keys.min)
-      days from
-      = @by_day.keys.min
-      to
-      = @by_day.keys.max.to_s + '.'
-    - @by_month.keys.sort.each do |month|
-      = partial(:_calendar, {:reviews => @by_month[month]})
+- name = t(@user_info.at('name'))
+- user_link = Goodreads.user_link(@user_id)
+- count = @all_reviews.search('review').length
+- start = @by_day.keys.min
+- finish = @by_day.keys.max
+- per_week = ((count * 7) / (finish - start)).to_f
+%h1
+  Goodreads timeline for user ID
+  %a{:href => user_link}= @user_id
+:markdown
+  ![](#{t(@user_info.at('small_image_url'))}) [#{name}](#{user_link})
+  has read #{count} books over #{finish - start} days from #{start} to
+  #{finish}. (That's around #{sprintf('%01.2f', per_week)} books per
+  week.)
+  {:#user-info}
+
+  They might have read more or less than this -- all this shows is
+  what they've entered into [Goodreads](http://www.goodreads.com/).
+%h2#calendars Monthly reading calendars
+- @by_month.keys.sort.each do |month|
+  = partial(:_calendar, {:reviews => @by_month[month]})

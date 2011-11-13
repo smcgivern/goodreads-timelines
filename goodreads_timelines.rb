@@ -8,12 +8,17 @@ helpers do
   def partial(template, variables={})
     haml(template, {:layout => false}, variables)
   end
+
+  # Take the inner_text and remove surrounding whitespace from a
+  # Nokogiri element.
+  def t(e); e.inner_text.strip; end
 end
 
 get('/ext/style.css') {scss(:style)}
 
 get('/::user_id/?') do
   @user_id = params['user_id']
+  @user_info = Goodreads.user_info(@user_id)
   @all_reviews = Goodreads.all_reviews(@user_id)
   @by_day = Goodreads.reviews_by_date(@all_reviews)
 
