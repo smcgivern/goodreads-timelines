@@ -7,7 +7,6 @@ function element(name, content, attributes) {
     return e;
 }
 
-
 // http://stackoverflow.com/questions/2901102/2901298#2901298
 function thousands(x) {
     return x.toString().replace(/\B(?=(?:\d{3})+(?!\d))/g, ',');
