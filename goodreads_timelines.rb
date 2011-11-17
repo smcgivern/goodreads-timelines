@@ -23,6 +23,23 @@ helpers do
   # Take the inner_text and remove surrounding whitespace from a
   # Nokogiri element.
   def t(e); e.inner_text.strip; end
+
+  # Gets the important book information from a review and turns it
+  # into a hash.
+  def book_info(review)
+    info = {
+      :title => 'title',
+      :author => 'author name',
+      :thumbnail => 'small_image_url',
+      :pages => 'num_pages',
+      :rating => 'rating',
+      :average => 'average_rating',
+      :ratings => 'ratings_count',
+      :published => 'published',
+    }
+
+    Hash[info.map {|k, v| [k, t(review.at(v))]}]
+  end
 end
 
 get('/ext/style.css') {scss(:style)}
@@ -51,26 +68,10 @@ get('/::user_id/?') do
                    group_by {|d, r| d.strftime("%Y/%m")}.
                    map {|k, v| [k, Hash[v]]}]
 
-  review_to_hash = lambda do |review|
-    {
-      :title => t(review.at('title')),
-      :author => t(review.at('author name')),
-      :pages => t(review.at('num_pages')).to_i,
-    }
-  end
-
-  @by_month_chart = Hash[@by_month.map do |month, days|
-                           [month, Hash[days.map do |day, rs|
-                                          [day,
-                                           rs.map(&review_to_hash)]
-                                        end]]
-                         end].to_json
-
-
   @page_title = "Goodreads timeline for #{@user_id}"
   @excanvas = '/ext/excanvas.min.js'
   @scripts = ['/ext/jquery-1.7.min.js', '/ext/flot.min.js',
-              '/ext/chart.js']
+              '/ext/qtip.min.js', '/ext/chart.js', '/ext/tooltip.js']
 
   haml(:timeline)
 end

@@ -32,8 +32,8 @@
               .date= day.strftime("%e")
               .reviews<
                 - reviews[day].each do |review|
-                  - title = t(review.at('title'))
-                  %a{:href => t(review.at('link')), :title => title}<
-                    %img{:width => 30, :height => 45, :alt => title,
+                  - info = book_info(review)
+                  %a{:href => t(review.at('link')), :data => info}<
+                    %img{:width => 30, :height => 45, :alt => info[:title],
                          :src => t(review.at('small_image_url'))}
       - break if point >= offset + last.day - 1
