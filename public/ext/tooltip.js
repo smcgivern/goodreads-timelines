@@ -19,7 +19,7 @@ function bookInfoItemFunction(elem, parent) {
         if (func) { definition = func(elem); }
         if (definition == '') { return false; }
 
-        var item = [element('dd', title), element('dt', definition)];
+        var item = [element('dt', title), element('dd', definition)];
 
         $().append.apply(parent, item);
 
