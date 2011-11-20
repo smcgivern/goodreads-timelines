@@ -78,7 +78,7 @@ function chartTitle(data, xAxis, yAxis) {
     $('#charts h2').text(chartTitle);
 
     var altLink = element('span',
-                          (((newY == 'count') ? 'pages' : 'books')
+                          (((newY == 'count') ? 'books' : 'pages')
                            + ' read'),
                           {class: 'click'});
 
