@@ -66,16 +66,33 @@ function labelFor(format) {
     return function(p) { return $.plot.formatDate(p[0], format); }
 }
 
-function chart(data, xAxis, yAxis) {
-    data = (typeof data == 'undefined') ? bookData : data;
-    xAxis = (typeof xAxis == 'undefined') ? 'month' : xAxis;
-    yAxis = (typeof yAxis == 'undefined') ? 'pages' : xAxis;
+function chartTitle(data, xAxis, yAxis) {
+    var newY = (yAxis == 'count') ? 'pages' : 'count';
 
     var chartTitle = [
-        (xAxis == 'count') ? 'Books' : 'Pages',
+        (yAxis == 'count') ? 'Books' : 'Pages',
         ' read by ',
         (xAxis == 'month') ? 'month' : 'day'
     ].join('');
+
+    $('#charts h2').text(chartTitle);
+
+    var altLink = element('span',
+                          (((newY == 'count') ? 'pages' : 'books')
+                           + ' read'),
+                          {class: 'click'});
+
+    altLink.click(function() { chart(data, xAxis, newY); });
+
+    $('#charts h2').append(' (show ');
+    $('#charts h2').append(altLink);
+    $('#charts h2').append(')');
+}
+
+function chart(data, xAxis, yAxis) {
+    data = (typeof data == 'undefined') ? bookData : data;
+    xAxis = (typeof xAxis == 'undefined') ? 'month' : xAxis;
+    yAxis = (typeof yAxis == 'undefined') ? 'pages' : yAxis;
 
     var timeFormat = (xAxis == 'month') ? '%y/%0m' : '%y/%0m/%0d'
     var label = labelFor(timeFormat);
@@ -114,7 +131,7 @@ function chart(data, xAxis, yAxis) {
         grid: { clickable: true }
     };
 
-    $('#charts h2').text(chartTitle);
+    chartTitle(data, xAxis, yAxis);
 
     $.plot($('#chart'), [
         {
