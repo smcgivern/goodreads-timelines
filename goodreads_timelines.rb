@@ -28,6 +28,7 @@ helpers do
   # into a hash.
   def book_info(review)
     info = {
+      :date => 'read_at',
       :title => 'title',
       :author => 'author name',
       :thumbnail => 'small_image_url',
