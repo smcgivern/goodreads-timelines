@@ -1,3 +1,5 @@
+var root = $($('h1 a').first()).attr('href');
+
 function element(name, content, attributes) {
     var e = $(document.createElement(name));
 
@@ -33,7 +35,7 @@ function stars(elem) {
     if (rating == 0) { return false; }
 
     return element('img', null, {
-        src: '/ext/star-' + rating + '.gif',
+        src: root + 'ext/star-' + rating + '.gif',
         width: 16 * rating,
         height: '16',
         alt: rating + ' stars'
