@@ -52,7 +52,7 @@ function averageRating(elem) {
 $(function() {
     var userName = $('#user-name').text();
 
-    $('td div.reviews a').each(function() {
+    $('td div.reviews a').each(function(i) {
         var bookInfo = element('dl');
         var bookInfoItem = bookInfoItemFunction($(this), bookInfo);
 
@@ -64,7 +64,8 @@ $(function() {
         bookInfoItem('Overall rating', '', averageRating);
 
         $(this).qtip({
-            prerender: true,
+            // Only pre-render the first 1,000 tooltips.
+            prerender: i < 1000,
             content: {
                 text: bookInfo,
                 title: $(this).data('title')
