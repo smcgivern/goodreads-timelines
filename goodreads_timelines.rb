@@ -24,6 +24,11 @@ helpers do
   # Nokogiri element.
   def t(e); e.inner_text.strip; end
 
+  # Formats a number using a comma as the thousands seperator.
+  def thousands(n)
+    n.to_s.gsub(/(\d)(?=(\d\d\d)+(?!\d))/, "\\1,")
+  end
+
   # Gets the important book information from a review and turns it
   # into a hash.
   def book_info(review)

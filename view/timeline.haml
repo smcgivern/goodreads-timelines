@@ -12,11 +12,11 @@
 
 :markdown
   ![](#{t(@user_info.at('small_image_url'))}) <span
-  id="user-name">[#{name}](#{user_link})</span> has read #{count}
-  books over #{finish - start} days from #{start} to
-  #{finish}. (That's around #{sprintf('%01.2f', per_week)} books per
-  week.) There are [charts](#charts) and [calendars](#calendars)
-  available of their reading history.
+  id="user-name">[#{name}](#{user_link})</span> has read
+  #{thousands(count)} books over #{thousands(finish - start)} days
+  from #{start} to #{finish}. (That's around #{sprintf('%01.2f',
+  per_week)} books per week.) There are [charts](#charts) and
+  [calendars](#calendars) available of their reading history.
   {:#user-info}
 
   They might have read more or less than this -- all this shows is
