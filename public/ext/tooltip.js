@@ -66,8 +66,8 @@ $(function() {
         bookInfoItem('Overall rating', '', averageRating);
 
         $(this).qtip({
-            // Only pre-render the first 1,000 tooltips.
-            prerender: i < 1000,
+            // Only pre-render the first 100 tooltips.
+            prerender: i < 100,
             content: {
                 text: bookInfo,
                 title: $(this).data('title')
