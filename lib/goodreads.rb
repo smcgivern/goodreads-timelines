@@ -87,7 +87,9 @@ module Goodreads
   # Picks the page number of user_id's reviews using the Goodreads
   # API's review.list method.
   def self.list_page(user_id, page=1, options=OPTIONS)
-    review_list = cache_to("review_list_#{user_id}.xml", options) do
+    filename = "review_list_#{user_id}_#{page}.xml"
+
+    review_list = cache_to(filename, options) do
       expansions = {
         'user_id' => user_id,
         'api_key' => API_KEY,
