@@ -1,6 +1,3 @@
-var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
-                  'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
 var bookFields = ['date', 'title', 'author', 'pages', 'rating',
                   'published'];
 
@@ -38,27 +35,37 @@ if (!Array.prototype.indexOf) {
     }
 }
 
-// Converts the Goodreads date format to a JavaScript date object. The
-// format is, in Ruby terms:
-//   %a %b %d %H:%M:%S %Z %Y
-// For example:
-// Thu Dec 30 00:00:00 -0800 2010
-function toDate(str) {
-    dateParts = str.split(' ');
+String.prototype.capitalise = function() {
+    return this.charAt(0).toUpperCase() + this.slice(1);
+}
 
-    return new Date(Date.UTC(dateParts[5],
-                             monthNames.indexOf(dateParts[1]),
+function toDate(str) {
+    dateParts = str.split('-');
+
+    return new Date(Date.UTC(dateParts[0],
+                             parseInt(dateParts[1], 10) - 1,
                              dateParts[2]));
 }
 
 function loadBookData() {
-    return $('td div.reviews a').map(function(i, link) {
-        var e = $(link);
-        var data = { url: e.attr('href') };
+    return $('table.calendar td').map(function(i, cell) {
+        cell = $(cell);
 
-        $.each(bookFields, function(j, v) { data[v] = e.data(v); });
+        if (cell.find('div').length == 0) { return null; }
 
-        return [[toDate(e.data('date')), data]];
+        var date = toDate($(cell.find('.date')[0]).data('date'));
+
+        var books = cell.find('.reviews a').map(function(j, link) {
+            var data = { url: $(link).attr('href') };
+
+            $.each(bookFields, function(k, field) {
+                data[field] = $(link).data(field);
+            });
+
+            return data;
+        });
+
+        return [[date, $.makeArray(books)]];
     });
 }
 
@@ -66,27 +73,68 @@ function labelFor(format) {
     return function(p) { return $.plot.formatDate(p[0], format); }
 }
 
-function chartTitle(data, xAxis, yAxis) {
+function addChartTitle(data, xAxis, yAxis) {
+    var header = $('#charts h2');
+    var click = { class: 'click' };
+    var newX = (xAxis == 'month') ? 'day' : 'month';
     var newY = (yAxis == 'count') ? 'pages' : 'count';
 
-    var chartTitle = [
-        (yAxis == 'count') ? 'Books' : 'Pages',
-        ' read by ',
-        (xAxis == 'month') ? 'month' : 'day'
-    ].join('');
+    var chartTitle = yTitle(yAxis) + ' read by ' + xAxis;
+    var altX = element('span', 'by ' + newX, click);
+    var altY = element('span', yTitle(newY) + ' read', click);
 
-    $('#charts h2').text(chartTitle);
+    altX.click(function() { chart(data, newX, yAxis); });
+    altY.click(function() { chart(data, xAxis, newY); });
 
-    var altLink = element('span',
-                          (((newY == 'count') ? 'books' : 'pages')
-                           + ' read'),
-                          {class: 'click'});
+    header.text(chartTitle.capitalise());
 
-    altLink.click(function() { chart(data, xAxis, newY); });
+    header.
+        append(' (show ').
+        append(altY).
+        append(' / ').
+        append(altX).
+        append(')');
+}
 
-    $('#charts h2').append(' (show ');
-    $('#charts h2').append(altLink);
-    $('#charts h2').append(')');
+function makeTicks(data, labeller) {
+    var tickedOff = [];
+
+    return $.map(data, function(point, i) {
+        var tickLabel = labeller(point);
+
+        if (tickedOff.indexOf(tickLabel) > -1) { return null; }
+
+        tickedOff.push(tickLabel);
+
+        return [[tickedOff.length - 1, tickLabel, point[0]]];
+    });
+}
+
+function yTitle(y) { return (y == 'count') ? 'books' : y; }
+
+function chartSwitches(xAxis, yAxis) {
+    var ySize = function(book) {
+        return (yAxis == 'count') ? 1 : parseInt('0' + book[yAxis], 10);
+    }
+
+    return {
+        month: {
+            dateFormat: '%y/%0m',
+            ySize: ySize,
+            xPoint: function(x, n) { return n; },
+            xAxis: function(ts) {
+                return { ticks: ts, tickLength: 0 };
+            }
+        },
+        day: {
+            dateFormat: '%y/%0m/%0d',
+            ySize: ySize,
+            xPoint: function(t, x) { return t[2]; },
+            xAxis: function(x) {
+                return { mode: 'time', timeformat: '%y/%0m' };
+            }
+        }
+    }[xAxis];
 }
 
 function chart(data, xAxis, yAxis) {
@@ -94,20 +142,9 @@ function chart(data, xAxis, yAxis) {
     xAxis = (typeof xAxis == 'undefined') ? 'month' : xAxis;
     yAxis = (typeof yAxis == 'undefined') ? 'pages' : yAxis;
 
-    var timeFormat = (xAxis == 'month') ? '%y/%0m' : '%y/%0m/%0d'
-    var label = labelFor(timeFormat);
-    var tickedOff = [];
-    var offsets = {};
-
-    var ticks = $.map(data, function(point, i) {
-        var tickLabel = label(point);
-
-        if (tickedOff.indexOf(tickLabel) > -1) { return null; }
-
-        tickedOff.push(tickLabel);
-
-        return [[tickedOff.length - 1, tickLabel]];
-    });
+    var switches = chartSwitches(xAxis, yAxis);
+    var label = labelFor(switches.dateFormat);
+    var ticks = makeTicks(data, label);
 
     var chartData = $.map(ticks, function(tick, i) {
         var y = 0;
@@ -116,33 +153,31 @@ function chart(data, xAxis, yAxis) {
             return (label(point) == tick[1]);
         });
 
-        var ys = $.each(points, function(j, point) {
-            y += (yAxis == 'count') ?
-                1 :
-                parseInt('0' + point[1][yAxis], 10);
+        $.each(points, function(j, books) {
+            $.each(books[1], function(k, book) {
+                y += switches.ySize(book);
+            });
         });
 
-        return [[i, y]];
+        return [[switches.xPoint(tick, i), y]];
     });
 
-    var chartOptions = {
-        xaxis: { ticks: ticks, tickLength: 0 },
-        yaxis: { tickFormatter: thousands, tickLength: 0 },
-        grid: { clickable: true }
-    };
-
-    chartTitle(data, xAxis, yAxis);
+    addChartTitle(data, xAxis, yAxis);
 
     $.plot($('#chart'), [
         {
             data: chartData,
             bars: { show: true, align: 'center' }
         }
-    ], chartOptions);
+    ], {
+        xaxis: switches.xAxis(ticks),
+        yaxis: { tickFormatter: thousands, tickLength: 0 },
+        grid: { clickable: true }
+    });
 
     $('#chart').bind('plotclick', function(event, pos, item) {
         if (item) {
-            monthID = ticks[item.dataIndex][1].replace('/', '-');
+            monthID = ticks[item.dataIndex][1].replace(/\//g, '-');
             location.href = '#calendar-' + monthID;
         }
     });

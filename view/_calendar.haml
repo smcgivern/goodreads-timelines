@@ -29,7 +29,8 @@
           %td
             - if (point + 1).between?(offset + first.day, offset + last.day)
               - day = first + point - offset
-              .date= day.strftime("%e")
+              .date{:data => {:date => day.strftime('%Y-%m-%d')}}
+                = day.strftime('%e')
               .reviews<
                 - reviews[day].each do |review|
                   - info = book_info(review)
