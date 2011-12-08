@@ -64,7 +64,7 @@ post('/go-to-timeline/?') do
 end
 
 get('/::user_id/?') do
-  @user_id = params['user_id']
+  @user_id = params['user_id'].match(/[0-9]+/).to_s
   @user_info = Goodreads.user_info(@user_id)
   @all_reviews = Goodreads.all_reviews(@user_id)
   @by_day = Goodreads.reviews_by_date(@all_reviews)
