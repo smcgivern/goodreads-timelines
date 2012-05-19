@@ -4,6 +4,7 @@
     %title= @page_title
     %link{:href => r('/ext/style.css'), :rel => 'stylesheet',
           :type => 'text/css'}
+    %link{:href => r('/ext/app-icon.png'), :rel => 'apple-touch-icon'}
     -if @excanvas
       /[if lte IE8]
         %script{:src => r(@excanvas), :type => 'text/javascript'}
