@@ -1,7 +1,16 @@
 require 'bundler/setup'
 require 'lib/goodreads'
 require 'sinatra'
-require 'json'
+require 'haml'
+require 'kramdown'
+
+module Kramdown
+  include Haml::Filters::Base
+
+  def render(text)
+    ::Kramdown::Document.new(text).to_html
+  end
+end
 
 set(:views, Proc.new {File.join(root, 'view')})
 set(:haml, :format => :html5)
