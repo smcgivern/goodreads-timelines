@@ -1,5 +1,5 @@
 require 'bundler/setup'
-require 'lib/goodreads'
+require './lib/goodreads'
 require 'sinatra'
 require 'haml'
 require 'kramdown'

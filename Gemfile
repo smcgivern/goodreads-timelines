@@ -1,10 +1,9 @@
-source :rubygems
-
-gem 'rack', '1.2.1'
+gem 'rack'
 gem 'haml'
 gem 'kramdown'
 gem 'sass'
 gem 'sinatra'
+gem 'rake'
 
 # For lib/goodreads.rb.
 gem 'addressable'
