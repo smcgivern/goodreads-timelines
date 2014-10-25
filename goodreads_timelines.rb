@@ -35,7 +35,7 @@ helpers do
 
   # Formats a number using a comma as the thousands seperator.
   def thousands(n)
-    n.to_s.gsub(/(\d)(?=(\d\d\d)+(?!\d))/, "\\1,")
+    n.to_i.to_s.gsub(/(\d)(?=(\d\d\d)+(?!\d))/, "\\1,")
   end
 
   # Gets the important book information from a review and turns it
