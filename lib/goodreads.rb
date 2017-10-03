@@ -20,13 +20,13 @@ module Goodreads
   ADDRESSES = {
     :review => {
       :list =>
-      ::Addressable::Template.new('http://www.goodreads.com/review/list/{user_id}.xml?key={api_key}&page={page}&per_page={page_size}&sort=date_read&order=d&shelf=read&v=2'),
+      ::Addressable::Template.new('https://www.goodreads.com/review/list/{user_id}.xml?key={api_key}&page={page}&per_page={page_size}&sort=date_read&order=d&shelf=read&v=2'),
     },
     :user => {
       :link =>
-      ::Addressable::Template.new('http://www.goodreads.com/user/show/{-list|-|user_info}'),
+      ::Addressable::Template.new('https://www.goodreads.com/user/show/{-list|-|user_info}'),
       :show =>
-      ::Addressable::Template.new('http://www.goodreads.com/user/show/{user_id}.xml?key={api_key}'),
+      ::Addressable::Template.new('https://www.goodreads.com/user/show/{user_id}.xml?key={api_key}'),
     }
   }
 
