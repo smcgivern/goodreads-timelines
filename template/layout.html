@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>{{ .Title }}</title>
+    <link href="/ext/style.css" rel="stylesheet" type="text/css">
+    <link href="/ext/app-icon.png" rel="apple-touch-icon">
+  </head>
+  <body>
+    {{ block "main" . }}{{ end }}
+    <div id="byline">
+      <p>
+        By
+        <a href="http://sean.mcgivern.me.uk/">Sean McGivern</a>
+      </p>
+    </div>
+    {{ range .Scripts }}
+    <script src="{{ . }}" type="text/javascript"></script>
+    {{ end }}
+  </body>
+</html>

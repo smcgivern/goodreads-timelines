@@ -1,0 +1,29 @@
+{{ define "main" }}
+{{ $sean := "https://www.goodreads.com/user/show/4625510-sean" }}
+
+<h1>Goodreads timelines</h1>
+<p>This is a small tool to show timelines of someone’s reading on
+  <a href="http://www.goodreads.com/">Goodreads</a>. Enter the address of a
+  Goodreads profile below (for example: mine is
+  <code><a href="{{ $sean }}">{{ $sean }}</a></code>) to see the results.
+</p>
+
+<p>
+  Because Goodreads only allow people to query their database once per
+  second, this might take a short while if you’re doing it:
+</p>
+
+<ol>
+  <li>for someone with a lot of reviews;</li>
+  <li>when the site is busy.</li>
+</ol>
+
+<p>Have fun!</p>
+
+<form action="/goodreads-timelines/go-to-timeline/" id="go-to-timeline" method="POST">
+  <p>
+    <input id="goodreads-uri" name="goodreads-uri" size="60" type="url" value="{{ $sean }}">
+    <input id="go" type="submit" value="Go!">
+  </p>
+</form>
+{{ end }}

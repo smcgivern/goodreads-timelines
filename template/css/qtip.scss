@@ -1,0 +1,52 @@
+/* Standard styles. */
+.ui-tooltip {
+    min-width: 15em;
+    max-width: 25em;
+    font-size: 80%;
+    border: 1px solid #cc9;
+    color: #555;
+    background-color: #ffa;
+
+    dt, dd {
+        float: left;
+        margin: 0.2em 0em;
+        padding: 0em;
+    }
+
+    dt {
+        width: 7em;
+        clear: left;
+    }
+
+    dd {
+        padding-left: 0.2em;
+    }
+
+    /* Hide tooltips when not in use. */
+    position: absolute;
+    left: -28000px;
+    top: -28000px;
+    display: none;
+    z-index: 15000;
+}
+
+.ui-tooltip-default {
+    border-color: #cc9;
+}
+
+.ui-tooltip-content {
+    position: relative;
+    padding: 0em 0.2em;
+    overflow: hidden;
+    text-align: left;
+    word-wrap: break-word;
+    overflow: hidden;
+}
+
+.ui-tooltip-titlebar {
+    position: relative;
+    padding: 0.2em 0.2em 0em 0.2em;
+    overflow: hidden;
+    font-family: $header-font;
+    font-weight: bold;
+}
