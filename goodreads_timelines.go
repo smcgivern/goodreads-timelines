@@ -1,11 +1,14 @@
 package main
 
 import (
+	"fmt"
+	libsass "github.com/wellington/go-libsass"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	libsass "github.com/wellington/go-libsass"
+	"strings"
 )
 
 type Page struct {
@@ -13,9 +16,22 @@ type Page struct {
 	Scripts []string
 }
 
+var rootUrl string
+var functionMap template.FuncMap
+
+func baseUrl(url string) string {
+	rootLeadingSlash := fmt.Sprintf("/%s", rootUrl)
+	rootDoubleSlash := fmt.Sprintf("%s/", rootLeadingSlash)
+
+	if strings.HasPrefix(url, "/") && !strings.HasPrefix(url, rootDoubleSlash) {
+		return fmt.Sprintf("%s%s", rootLeadingSlash, url)
+	} else {
+		return url
+	}
+}
+
 func homePage(w http.ResponseWriter, r *http.Request) {
-	template := template.Must(template.ParseFiles("template/layout.html",
-		"template/index.html"))
+	template := template.Must(template.New("layout.html").Funcs(functionMap).ParseFiles("template/layout.html", "template/index.html"))
 
 	page := Page{
 		Title:   "Goodreads timelines",
@@ -50,9 +66,21 @@ func stylesheet(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/", homePage)
-	http.Handle("/ext/", http.StripPrefix("/ext/", http.FileServer(http.Dir("public/ext"))))
-	http.HandleFunc("/ext/style.css", stylesheet)
+	rootFile, err := ioutil.ReadFile(".root")
+	if err != nil {
+		rootUrl = ""
+	} else {
+		rootUrl = strings.TrimSpace(string(rootFile))
+	}
+
+	functionMap = template.FuncMap{
+		"baseUrl": baseUrl,
+	}
+
+	http.HandleFunc(baseUrl("/"), homePage)
+	http.Handle(baseUrl("/ext/"),
+		http.StripPrefix(baseUrl("/ext/"), http.FileServer(http.Dir("public/ext"))))
+	http.HandleFunc(baseUrl("/ext/style.css"), stylesheet)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

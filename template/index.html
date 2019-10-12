@@ -20,7 +20,7 @@
 
 <p>Have fun!</p>
 
-<form action="/goodreads-timelines/go-to-timeline/" id="go-to-timeline" method="POST">
+<form action="{{ "/go-to-timeline/" | baseUrl }}" id="go-to-timeline" method="POST">
   <p>
     <input id="goodreads-uri" name="goodreads-uri" size="60" type="url" value="{{ $sean }}">
     <input id="go" type="submit" value="Go!">

@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>{{ .Title }}</title>
-    <link href="/ext/style.css" rel="stylesheet" type="text/css">
-    <link href="/ext/app-icon.png" rel="apple-touch-icon">
+    <link href="{{ "/ext/style.css" | baseUrl }}" rel="stylesheet" type="text/css">
+    <link href="{{ "/ext/app-icon.png" | baseUrl }}" rel="apple-touch-icon">
   </head>
   <body>
     {{ block "main" . }}{{ end }}
@@ -14,7 +14,7 @@
       </p>
     </div>
     {{ range .Scripts }}
-    <script src="{{ . }}" type="text/javascript"></script>
+    <script src="{{ . | baseUrl }}" type="text/javascript"></script>
     {{ end }}
   </body>
 </html>
