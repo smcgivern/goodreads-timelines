@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"github.com/yosida95/uritemplate"
 )
 
 type Page struct {
@@ -18,7 +19,18 @@ type Page struct {
 }
 
 var rootUrl string
+var goodreadsKey string
+var userLinkTemplate *uritemplate.Template
 var functionMap template.FuncMap
+
+func readFile(path string) string {
+	file, err := ioutil.ReadFile(path)
+	if err == nil {
+		return strings.TrimSpace(string(file))
+	} else {
+		return ""
+	}
+}
 
 func baseUrl(url string) string {
 	rootLeadingSlash := fmt.Sprintf("/%s", rootUrl)
@@ -57,7 +69,12 @@ func compileSass() *bytes.Reader {
 	return bytes.NewReader(buffer.Bytes())
 }
 
-func homePage(w http.ResponseWriter, r *http.Request) {
+func goToTimeline(w http.ResponseWriter, r *http.Request) {
+	userId := userLinkTemplate.Match(r.FormValue("goodreads-uri")).Get("user_id")
+	http.Redirect(w, r, baseUrl(fmt.Sprintf("/:%s/", userId)), http.StatusSeeOther)
+}
+
+func home(w http.ResponseWriter, r *http.Request) {
 	template := template.Must(template.New("layout.html").Funcs(functionMap).ParseFiles("template/layout.html", "template/index.html"))
 
 	page := Page{
@@ -77,18 +94,16 @@ func stylesheet(buffer *bytes.Reader) func(http.ResponseWriter, *http.Request) {
 }
 
 func main() {
-	rootFile, err := ioutil.ReadFile(".root")
-	if err != nil {
-		rootUrl = ""
-	} else {
-		rootUrl = strings.TrimSpace(string(rootFile))
-	}
-
+	rootUrl = readFile(".root")
+	goodreadsKey = readFile("goodreads.key")
+	userLinkTemplate = uritemplate.MustNew("https://www.goodreads.com/user/show/{user_id}-{user_name}")
 	functionMap = template.FuncMap{
 		"baseUrl": baseUrl,
 	}
 
-	http.HandleFunc(baseUrl("/"), homePage)
+	http.HandleFunc(baseUrl("/"), home)
+	http.HandleFunc(baseUrl("/go-to-timeline/"), goToTimeline)
+	http.HandleFunc(baseUrl("/:"), home)
 	http.Handle(baseUrl("/ext/"),
 		http.StripPrefix(baseUrl("/ext/"), http.FileServer(http.Dir("public/ext"))))
 	http.HandleFunc(baseUrl("/ext/style.css"), stylesheet(compileSass()))
