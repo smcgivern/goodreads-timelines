@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	libsass "github.com/wellington/go-libsass"
 	"html/template"
@@ -30,26 +31,15 @@ func baseUrl(url string) string {
 	}
 }
 
-func homePage(w http.ResponseWriter, r *http.Request) {
-	template := template.Must(template.New("layout.html").Funcs(functionMap).ParseFiles("template/layout.html", "template/index.html"))
-
-	page := Page{
-		Title:   "Goodreads timelines",
-		Scripts: []string{"/ext/jquery-1.7.min.js", "/ext/index.js"},
-	}
-
-	template.Execute(w, page)
-}
-
-func stylesheet(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/css")
+func compileSass() *bytes.Reader {
+	var buffer bytes.Buffer
 
 	file, err := os.Open("template/css/style.scss")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	compiler, err := libsass.New(w, file)
+	compiler, err := libsass.New(&buffer, file)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,6 +52,27 @@ func stylesheet(w http.ResponseWriter, r *http.Request) {
 
 	if err := compiler.Run(); err != nil {
 		log.Fatal(err)
+	}
+
+	return bytes.NewReader(buffer.Bytes())
+}
+
+func homePage(w http.ResponseWriter, r *http.Request) {
+	template := template.Must(template.New("layout.html").Funcs(functionMap).ParseFiles("template/layout.html", "template/index.html"))
+
+	page := Page{
+		Title:   "Goodreads timelines",
+		Scripts: []string{"/ext/jquery-1.7.min.js", "/ext/index.js"},
+	}
+
+	template.Execute(w, page)
+}
+
+func stylesheet(buffer *bytes.Reader) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/css")
+		buffer.WriteTo(w)
+		buffer.Seek(0, 0)
 	}
 }
 
@@ -80,7 +91,7 @@ func main() {
 	http.HandleFunc(baseUrl("/"), homePage)
 	http.Handle(baseUrl("/ext/"),
 		http.StripPrefix(baseUrl("/ext/"), http.FileServer(http.Dir("public/ext"))))
-	http.HandleFunc(baseUrl("/ext/style.css"), stylesheet)
+	http.HandleFunc(baseUrl("/ext/style.css"), stylesheet(compileSass()))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
