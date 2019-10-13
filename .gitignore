@@ -3,3 +3,4 @@ tmp/
 .sass-cache/
 *.rake
 .root
+goodreads-timelines
