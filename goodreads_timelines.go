@@ -3,19 +3,23 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/KyleBanks/goodreads"
+	"github.com/gorilla/mux"
 	libsass "github.com/wellington/go-libsass"
+	"github.com/yosida95/uritemplate"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"github.com/yosida95/uritemplate"
 )
 
 type Page struct {
-	Title   string
-	Scripts []string
+	Title    string
+	Scripts  []string
+	UserId   string
+	UserLink string
 }
 
 var rootUrl string
@@ -69,6 +73,35 @@ func compileSass() *bytes.Reader {
 	return bytes.NewReader(buffer.Bytes())
 }
 
+func timeline(w http.ResponseWriter, r *http.Request) {
+	userId := mux.Vars(r)["userId"]
+	client := goodreads.NewClient(goodreadsKey)
+
+	userInfo, err := client.UserShow(userId)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	template := template.Must(template.New("layout.html").Funcs(functionMap).ParseFiles("template/layout.html", "template/timeline.html"))
+	vars := uritemplate.Values{}
+	vars.Set("user_id", uritemplate.String(userId))
+
+	userLink, err := userLinkTemplate.Expand(vars)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	page := Page{
+		Title: fmt.Sprintf("Goodreads timeline for %s", userInfo.Name),
+		Scripts: []string{"/ext/jquery-1.7.min.js", "/ext/jquery-1.7.min.js", "/ext/flot.min.js",
+			"/ext/qtip.min.js", "/ext/chart.js", "/ext/tooltip.js"},
+		UserId:   userId,
+		UserLink: userLink,
+	}
+
+	template.Execute(w, page)
+}
+
 func goToTimeline(w http.ResponseWriter, r *http.Request) {
 	userId := userLinkTemplate.Match(r.FormValue("goodreads-uri")).Get("user_id")
 	http.Redirect(w, r, baseUrl(fmt.Sprintf("/:%s/", userId)), http.StatusSeeOther)
@@ -101,12 +134,13 @@ func main() {
 		"baseUrl": baseUrl,
 	}
 
-	http.HandleFunc(baseUrl("/"), home)
-	http.HandleFunc(baseUrl("/go-to-timeline/"), goToTimeline)
-	http.HandleFunc(baseUrl("/:"), home)
-	http.Handle(baseUrl("/ext/"),
-		http.StripPrefix(baseUrl("/ext/"), http.FileServer(http.Dir("public/ext"))))
-	http.HandleFunc(baseUrl("/ext/style.css"), stylesheet(compileSass()))
+	r := mux.NewRouter()
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	r.HandleFunc(baseUrl("/"), home)
+	r.HandleFunc(baseUrl("/go-to-timeline/"), goToTimeline)
+	r.HandleFunc(baseUrl("/ext/style.css"), stylesheet(compileSass()))
+	r.PathPrefix(baseUrl("/ext/")).Handler(http.StripPrefix(baseUrl("/ext/"), http.FileServer(http.Dir("public/ext"))))
+	r.HandleFunc(baseUrl("/:{userId}/"), timeline)
+
+	log.Fatal(http.ListenAndServe(":8080", r))
 }
