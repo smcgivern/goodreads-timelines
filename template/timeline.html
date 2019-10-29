@@ -1,7 +1,22 @@
 {{ define "main" }}
+{{ $length := .AllReviews | len }}
+{{ $start := (.AllReviews | last).ReadAt | parseTime }}
+{{ $finish := (index .AllReviews 0).ReadAt | parseTime }}
+{{ $days := daysBetween $finish $start }}
 <h1>
   <a href="{{ "/" | baseUrl }}">Goodreads timeline</a>
   for user ID
-  <a href="{{ .UserLink }}">{{ .UserId }}</a>
+  <a href="{{ .UserLink }}">{{ .UserInfo.ID }}</a>
 </h1>
+
+<p id="user-info">
+  <img src="{{ .UserInfo.SmallImageURL }}">
+  <span id="user-name">
+    <a href="{{ .UserLink }}">{{ .UserInfo.Name }}</a>
+  </span>
+
+  has read {{ $length | thousands }} books over {{ $days | thousands }}
+  days from {{ $start | isoDate }} to {{ $finish | isoDate }}. (That's
+  around {{ perWeek $length $days | printf "%01.2f" }} books per week.)
+</p>
 {{ end }}

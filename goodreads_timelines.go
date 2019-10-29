@@ -7,19 +7,22 @@ import (
 	"github.com/gorilla/mux"
 	libsass "github.com/wellington/go-libsass"
 	"github.com/yosida95/uritemplate"
+	"golang.org/x/text/message"
 	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 type Page struct {
-	Title    string
-	Scripts  []string
-	UserId   string
-	UserLink string
+	Title      string
+	Scripts    []string
+	UserLink   string
+	UserInfo   goodreads.User
+	AllReviews []goodreads.Review
 }
 
 var rootUrl string
@@ -45,6 +48,11 @@ func baseUrl(url string) string {
 	} else {
 		return url
 	}
+}
+
+func thousands(n int) string {
+	p := message.NewPrinter(message.MatchLanguage("en"))
+	return p.Sprint(n)
 }
 
 func compileSass() *bytes.Reader {
@@ -76,6 +84,7 @@ func compileSass() *bytes.Reader {
 func timeline(w http.ResponseWriter, r *http.Request) {
 	userId := mux.Vars(r)["userId"]
 	client := goodreads.NewClient(goodreadsKey)
+	reviews := make([]goodreads.Review, 0)
 
 	userInfo, err := client.UserShow(userId)
 	if err != nil {
@@ -85,21 +94,39 @@ func timeline(w http.ResponseWriter, r *http.Request) {
 	template := template.Must(template.New("layout.html").Funcs(functionMap).ParseFiles("template/layout.html", "template/timeline.html"))
 	vars := uritemplate.Values{}
 	vars.Set("user_id", uritemplate.String(userId))
+	vars.Set("user_name", uritemplate.String(strings.ToLower(userInfo.Name)))
 
 	userLink, err := userLinkTemplate.Expand(vars)
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	for page := 1; page < 100; page++ {
+		reviewPage, err := client.ReviewList(userId, "read", "date_read", "", "d", page, 200)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if len(reviewPage) == 0 {
+			break
+		}
+
+		reviews = append(reviews, reviewPage...)
+	}
+
 	page := Page{
 		Title: fmt.Sprintf("Goodreads timeline for %s", userInfo.Name),
 		Scripts: []string{"/ext/jquery-1.7.min.js", "/ext/jquery-1.7.min.js", "/ext/flot.min.js",
 			"/ext/qtip.min.js", "/ext/chart.js", "/ext/tooltip.js"},
-		UserId:   userId,
-		UserLink: userLink,
+		UserInfo:   *userInfo,
+		UserLink:   userLink,
+		AllReviews: reviews,
 	}
 
-	template.Execute(w, page)
+	err = template.Execute(w, page)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func goToTimeline(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +158,28 @@ func main() {
 	goodreadsKey = readFile("goodreads.key")
 	userLinkTemplate = uritemplate.MustNew("https://www.goodreads.com/user/show/{user_id}-{user_name}")
 	functionMap = template.FuncMap{
-		"baseUrl": baseUrl,
+		"baseUrl":   baseUrl,
+		"thousands": thousands,
+		"last": func(reviews []goodreads.Review) goodreads.Review {
+			return reviews[len(reviews)-1]
+		},
+		"parseTime": func(d string) time.Time {
+			t, err := time.Parse(time.RubyDate, d)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			return t
+		},
+		"daysBetween": func(a time.Time, b time.Time) int {
+			return int(a.Sub(b).Hours() / 24)
+		},
+		"isoDate": func(t time.Time) string {
+			return t.Format("2006-01-02")
+		},
+		"perWeek": func(books int, days int) float64 {
+			return float64(books*7) / float64(days)
+		},
 	}
 
 	r := mux.NewRouter()
