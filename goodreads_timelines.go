@@ -111,7 +111,11 @@ func timeline(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		reviews = append(reviews, reviewPage...)
+		for i := range reviewPage {
+			if reviewPage[i].ReadAt != "" {
+				reviews = append(reviews, reviewPage[i])
+			}
+		}
 	}
 
 	page := Page{
