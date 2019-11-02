@@ -18,11 +18,15 @@ import (
 )
 
 type Page struct {
-	Title      string
-	Scripts    []string
-	UserLink   string
-	UserInfo   goodreads.User
-	AllReviews []goodreads.Review
+	Title        string
+	Scripts      []string
+	UserLink     string
+	UserInfo     goodreads.User
+	Start        time.Time
+	Finish       time.Time
+	ReviewLength int
+	StartByMonth time.Time
+	ByMonth      [][][]goodreads.Review
 }
 
 var rootUrl string
@@ -53,6 +57,62 @@ func baseUrl(url string) string {
 func thousands(n int) string {
 	p := message.NewPrinter(message.MatchLanguage("en"))
 	return p.Sprint(n)
+}
+
+func daysBetween(a time.Time, b time.Time) int {
+	return int(a.Sub(b).Hours() / 24)
+}
+
+func parseTime(d string) time.Time {
+	t, err := time.Parse(time.RubyDate, d)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return t
+}
+
+// TODO: simplify! (Break into smaller functions? Define types for slices of reviews?)
+func byMonth(startByMonth time.Time, finish time.Time, reviews []goodreads.Review) [][][]goodreads.Review {
+	currentDate := startByMonth
+	finishByMonth := time.Date(finish.Year(), finish.Month(), 1, 23, 59, 59, 0, time.UTC).AddDate(0, 1, -1)
+	length := daysBetween(finishByMonth, currentDate) + 1
+	reviewsByMonth := make([][][]goodreads.Review, 1)
+	reviewsByMonth[0] = make([][]goodreads.Review, 1)
+	reviewsByMonth[0][0] = []goodreads.Review{}
+	currentReview := reviews[0]
+	month := 0
+	day := 0
+	review := 0
+
+	for {
+		dateDiff := currentDate.AddDate(0, 0, 1).Sub(parseTime(currentReview.ReadAt)).Hours()
+
+		if review < len(reviews) && dateDiff > 0 && dateDiff < 24 {
+			dayIndex := currentDate.Day() - 1
+			review++
+			reviewsByMonth[month][dayIndex] = append(reviewsByMonth[month][dayIndex], currentReview)
+
+			if review < len(reviews) {
+				currentReview = reviews[review]
+			}
+		} else {
+			day++
+			currentDate = currentDate.AddDate(0, 0, 1)
+
+			if day == length {
+				break
+			}
+
+			if currentDate.Day() == 1 {
+				month++
+				reviewsByMonth = append(reviewsByMonth, [][]goodreads.Review{})
+			}
+			reviewsByMonth[month] = append(reviewsByMonth[month], []goodreads.Review{})
+		}
+	}
+
+	return reviewsByMonth
 }
 
 func compileSass() *bytes.Reader {
@@ -102,7 +162,7 @@ func timeline(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for page := 1; page < 100; page++ {
-		reviewPage, err := client.ReviewList(userId, "read", "date_read", "", "d", page, 200)
+		reviewPage, err := client.ReviewList(userId, "read", "date_read", "", "a", page, 200)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -118,13 +178,22 @@ func timeline(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	reviewLength := len(reviews)
+	start := parseTime(reviews[0].ReadAt)
+	finish := parseTime(reviews[reviewLength-1].ReadAt)
+	startByMonth := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, time.UTC)
+
 	page := Page{
 		Title: fmt.Sprintf("Goodreads timeline for %s", userInfo.Name),
 		Scripts: []string{"/ext/jquery-1.7.min.js", "/ext/jquery-1.7.min.js", "/ext/flot.min.js",
 			"/ext/qtip.min.js", "/ext/chart.js", "/ext/tooltip.js"},
-		UserInfo:   *userInfo,
-		UserLink:   userLink,
-		AllReviews: reviews,
+		UserInfo:     *userInfo,
+		UserLink:     userLink,
+		Start:        start,
+		Finish:       finish,
+		ReviewLength: reviewLength,
+		StartByMonth: startByMonth,
+		ByMonth:      byMonth(startByMonth, finish, reviews),
 	}
 
 	err = template.Execute(w, page)
@@ -162,27 +231,43 @@ func main() {
 	goodreadsKey = readFile("goodreads.key")
 	userLinkTemplate = uritemplate.MustNew("https://www.goodreads.com/user/show/{user_id}-{user_name}")
 	functionMap = template.FuncMap{
-		"baseUrl":   baseUrl,
-		"thousands": thousands,
-		"last": func(reviews []goodreads.Review) goodreads.Review {
-			return reviews[len(reviews)-1]
-		},
-		"parseTime": func(d string) time.Time {
-			t, err := time.Parse(time.RubyDate, d)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			return t
-		},
-		"daysBetween": func(a time.Time, b time.Time) int {
-			return int(a.Sub(b).Hours() / 24)
-		},
+		"baseUrl":     baseUrl,
+		"thousands":   thousands,
+		"parseTime":   parseTime,
+		"daysBetween": daysBetween,
 		"isoDate": func(t time.Time) string {
 			return t.Format("2006-01-02")
 		},
 		"perWeek": func(books int, days int) float64 {
 			return float64(books*7) / float64(days)
+		},
+		"makeSlice": func(length int) []int {
+			return make([]int, length)
+		},
+		"reviewLength": func(days [][]goodreads.Review) int {
+			sum := 0
+			for _, day := range days {
+				sum += len(day)
+			}
+			return sum
+		},
+		"inc": func(x int) int {
+			return x + 1
+		},
+		"offset": func(t time.Time) int {
+			return int(t.Weekday())
+		},
+		"pointFor": func(week int, day int) int {
+			return (week * 7) + day
+		},
+		"between": func(point int, offset int, first time.Time, last time.Time) bool {
+			return (point+1) >= (offset+first.Day()) && (point+1) <= (offset+last.Day())
+		},
+		"dateForPoint": func(point int, offset int, first time.Time) time.Time {
+			return first.AddDate(0, 0, (point - offset))
+		},
+		"reviewsFor": func(date time.Time, days [][]goodreads.Review) []goodreads.Review {
+			return days[date.Day()-1]
 		},
 	}
 

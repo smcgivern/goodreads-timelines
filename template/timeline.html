@@ -1,8 +1,7 @@
 {{ define "main" }}
-{{ $length := .AllReviews | len }}
-{{ $start := (.AllReviews | last).ReadAt | parseTime }}
-{{ $finish := (index .AllReviews 0).ReadAt | parseTime }}
-{{ $days := daysBetween $finish $start }}
+{{ $days := daysBetween .Finish .Start }}
+{{ $calendarWeeks := makeSlice 6 }}
+{{ $calendarDays := makeSlice 7 }}
 <h1>
   <a href="{{ "/" | baseUrl }}">Goodreads timeline</a>
   for user ID
@@ -14,9 +13,66 @@
   <span id="user-name">
     <a href="{{ .UserLink }}">{{ .UserInfo.Name }}</a>
   </span>
-
-  has read {{ $length | thousands }} books over {{ $days | thousands }}
-  days from {{ $start | isoDate }} to {{ $finish | isoDate }}. (That's
-  around {{ perWeek $length $days | printf "%01.2f" }} books per week.)
+  has read {{ .ReviewLength | thousands }} books over {{ $days | thousands }}
+  days from {{ .Start | isoDate }} to {{ .Finish | isoDate }}. (That's
+  around {{ perWeek .ReviewLength $days | printf "%01.2f" }} books per
+  week.)
 </p>
+
+<div id="charts">
+  <h2></h2>
+  <div id="chart"></div>
+</div>
+
+<h2 id="calendars">Monthly reading calendars</h2>
+{{ range $i, $days := .ByMonth }}
+{{ $first := $.StartByMonth.AddDate 0 $i 0 }}
+{{ $next := inc $i }}
+{{ $last := $.StartByMonth.AddDate 0 $next -1 }}
+{{ $offset := $first | offset }}
+{{ $point := 0 }}
+{{ $calendarId := $first.Format "2006-01" | printf "calendar-%s" }}
+<table class="calendar" id="{{ $calendarId }}">
+  <caption>
+    <h3>
+      <a href="#{{ $calendarId }}">{{ $first.Format "January 2006" }}</a>
+      ({{ $days | reviewLength }})
+    </h3>
+  </caption>
+  <thead>
+    <tr>
+      <td>S</td>
+      <td>M</td>
+      <td>T</td>
+      <td>W</td>
+      <td>T</td>
+      <td>F</td>
+      <td>S</td>
+    </tr>
+  </thead>
+  <tbody>
+    {{ range $week, $_week := $calendarWeeks }}
+    <tr id="{{ $calendarId }}-week-{{ $week | inc }}">
+      {{ range $day, $_day := $calendarDays }}
+      <td>
+        {{ $point := pointFor $week $day }}
+        {{ if between $point $offset $first $last }}
+        {{ $date := dateForPoint $point $offset $first }}
+        <div class="date" data-date="{{ $date | isoDate }}">
+          {{ $date.Day }}
+        </div>
+        <div class="review">
+          {{ $reviews := reviewsFor $date $days }}
+          {{ range $review := $reviews }}
+          {{ $review.Book.TitleWithoutSeries }}
+          {{ end }}
+        </div>
+        {{ end }}
+      </td>
+      {{ end }}
+    </tr>
+    {{ end }}
+  </tbody>
+</table>
+{{ end }}
 {{ end }}
