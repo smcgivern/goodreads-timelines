@@ -61,10 +61,25 @@
         <div class="date" data-date="{{ $date | isoDate }}">
           {{ $date.Day }}
         </div>
-        <div class="review">
+        <div class="reviews">
           {{ $reviews := reviewsFor $date $days }}
           {{ range $review := $reviews }}
-          {{ $review.Book.TitleWithoutSeries }}
+          <a href="{{ $review.Book.Link }}"
+             data-date="{{ $review.ReadAt }}"
+             data-title="{{ $review.Book.TitleWithoutSeries }}"
+             data-author="{{ (index $review.Book.Authors 0).Name }}"
+             data-pages="{{ $review.Book.NumPages }}"
+             data-rating="{{ $review.Rating }}"
+             data-average="{{ $review.Book.AverageRating }}"
+             data-ratings="{{ $review.Book.RatingsCount }}"
+             data-published="{{ $review.Book.PublicationYear }}"
+             >
+            <img width="30"
+                 height="45"
+                 alt="{{ $review.Book.TitleWithoutSeries }}"
+                 src="{{ $review.Book.SmallImageURL }}"
+                 >
+          </a>
           {{ end }}
         </div>
         {{ end }}
