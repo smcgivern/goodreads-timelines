@@ -226,6 +226,13 @@ func stylesheet(buffer *bytes.Reader) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+func logRequests(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	rootUrl = readFile(".root")
 	goodreadsKey = readFile("goodreads.key")
@@ -279,5 +286,5 @@ func main() {
 	r.PathPrefix(baseUrl("/ext/")).Handler(http.StripPrefix(baseUrl("/ext/"), http.FileServer(http.Dir("public/ext"))))
 	r.HandleFunc(baseUrl("/:{userId}/"), timeline)
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(":8080", logRequests(r)))
 }
