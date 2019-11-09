@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/KyleBanks/goodreads"
 	"github.com/gorilla/mux"
+	"github.com/patrickmn/go-cache"
 	libsass "github.com/wellington/go-libsass"
 	"github.com/yosida95/uritemplate"
 	"golang.org/x/text/message"
@@ -29,6 +30,7 @@ type Page struct {
 	ByMonth      [][][]goodreads.Review
 }
 
+var c *cache.Cache
 var rootUrl string
 var goodreadsKey string
 var userLinkTemplate *uritemplate.Template
@@ -141,64 +143,91 @@ func compileSass() *bytes.Reader {
 	return bytes.NewReader(buffer.Bytes())
 }
 
-func timeline(w http.ResponseWriter, r *http.Request) {
-	userId := mux.Vars(r)["userId"]
-	client := goodreads.NewClient(goodreadsKey)
-	reviews := make([]goodreads.Review, 0)
+func userShow(client *goodreads.Client, userId string) *goodreads.User {
+	var err error
+	key := fmt.Sprintf("UserShow:%s", userId)
+	userInfo, found := c.Get(key)
 
-	userInfo, err := client.UserShow(userId)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	template := template.Must(template.New("layout.html").Funcs(functionMap).ParseFiles("template/layout.html", "template/timeline.html"))
-	vars := uritemplate.Values{}
-	vars.Set("user_id", uritemplate.String(userId))
-	vars.Set("user_name", uritemplate.String(strings.ToLower(userInfo.Name)))
-
-	userLink, err := userLinkTemplate.Expand(vars)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for page := 1; page < 100; page++ {
-		reviewPage, err := client.ReviewList(userId, "read", "date_read", "", "a", page, 200)
+	if !found {
+		userInfo, err = client.UserShow(userId)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		if len(reviewPage) == 0 {
-			break
+		c.Set(key, userInfo, cache.DefaultExpiration)
+	}
+
+	return userInfo.(*goodreads.User)
+}
+
+func reviewPage(client *goodreads.Client, userId string, page int) []goodreads.Review {
+	var err error
+	key := fmt.Sprintf("ReviewList:%s:%s", userId, page)
+	reviews, found := c.Get(key)
+
+	if !found {
+		reviews, err = client.ReviewList(userId, "read", "date_read", "", "a", page, 200)
+		if err != nil {
+			log.Fatal(err)
 		}
 
-		for i := range reviewPage {
-			if reviewPage[i].ReadAt != "" {
-				reviews = append(reviews, reviewPage[i])
+		c.Set(key, reviews, cache.DefaultExpiration)
+	}
+
+	return reviews.([]goodreads.Review)
+}
+
+func timeline(client *goodreads.Client) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := mux.Vars(r)["userId"]
+		userInfo := userShow(client, userId)
+		reviews := make([]goodreads.Review, 0)
+		template := template.Must(template.New("layout.html").Funcs(functionMap).ParseFiles("template/layout.html", "template/timeline.html"))
+		vars := uritemplate.Values{}
+		vars.Set("user_id", uritemplate.String(userId))
+		vars.Set("user_name", uritemplate.String(strings.ToLower(userInfo.Name)))
+
+		userLink, err := userLinkTemplate.Expand(vars)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for page := 1; page < 100; page++ {
+			reviewPage := reviewPage(client, userId, page)
+
+			if len(reviewPage) == 0 {
+				break
+			}
+
+			for i := range reviewPage {
+				if reviewPage[i].ReadAt != "" {
+					reviews = append(reviews, reviewPage[i])
+				}
 			}
 		}
-	}
 
-	reviewLength := len(reviews)
-	start := parseTime(reviews[0].ReadAt)
-	finish := parseTime(reviews[reviewLength-1].ReadAt)
-	startByMonth := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, time.UTC)
+		reviewLength := len(reviews)
+		start := parseTime(reviews[0].ReadAt)
+		finish := parseTime(reviews[reviewLength-1].ReadAt)
+		startByMonth := time.Date(start.Year(), start.Month(), 1, 0, 0, 0, 0, time.UTC)
 
-	page := Page{
-		Title: fmt.Sprintf("Goodreads timeline for %s", userInfo.Name),
-		Scripts: []string{"/ext/jquery-1.7.min.js", "/ext/jquery-1.7.min.js", "/ext/flot.min.js",
-			"/ext/qtip.min.js", "/ext/chart.js", "/ext/tooltip.js"},
-		UserInfo:     *userInfo,
-		UserLink:     userLink,
-		Start:        start,
-		Finish:       finish,
-		ReviewLength: reviewLength,
-		StartByMonth: startByMonth,
-		ByMonth:      byMonth(startByMonth, finish, reviews),
-	}
+		page := Page{
+			Title: fmt.Sprintf("Goodreads timeline for %s", userInfo.Name),
+			Scripts: []string{"/ext/jquery-1.7.min.js", "/ext/jquery-1.7.min.js", "/ext/flot.min.js",
+				"/ext/qtip.min.js", "/ext/chart.js", "/ext/tooltip.js"},
+			UserInfo:     *userInfo,
+			UserLink:     userLink,
+			Start:        start,
+			Finish:       finish,
+			ReviewLength: reviewLength,
+			StartByMonth: startByMonth,
+			ByMonth:      byMonth(startByMonth, finish, reviews),
+		}
 
-	err = template.Execute(w, page)
-	if err != nil {
-		log.Println(err)
+		err = template.Execute(w, page)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
 
@@ -236,6 +265,7 @@ func logRequests(handler http.Handler) http.Handler {
 func main() {
 	rootUrl = readFile(".root")
 	goodreadsKey = readFile("goodreads.key")
+	c = cache.New(24*time.Hour, 10*time.Minute)
 	userLinkTemplate = uritemplate.MustNew("https://www.goodreads.com/user/show/{user_id}-{user_name}")
 	functionMap = template.FuncMap{
 		"baseUrl":     baseUrl,
@@ -278,13 +308,14 @@ func main() {
 		},
 	}
 
+	client := goodreads.NewClient(goodreadsKey)
 	r := mux.NewRouter()
 
 	r.HandleFunc(baseUrl("/"), home)
 	r.HandleFunc(baseUrl("/go-to-timeline/"), goToTimeline)
 	r.HandleFunc(baseUrl("/ext/style.css"), stylesheet(compileSass()))
 	r.PathPrefix(baseUrl("/ext/")).Handler(http.StripPrefix(baseUrl("/ext/"), http.FileServer(http.Dir("public/ext"))))
-	r.HandleFunc(baseUrl("/:{userId}/"), timeline)
+	r.HandleFunc(baseUrl("/:{userId}/"), timeline(client))
 
 	log.Fatal(http.ListenAndServe(":8080", logRequests(r)))
 }
