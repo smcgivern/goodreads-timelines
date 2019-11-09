@@ -77,6 +77,49 @@ func parseTime(d string) time.Time {
 	return t
 }
 
+func assignFunctionMap() {
+	functionMap = template.FuncMap{
+		"baseUrl":     baseUrl,
+		"thousands":   thousands,
+		"parseTime":   parseTime,
+		"daysBetween": daysBetween,
+		"isoDate": func(t time.Time) string {
+			return t.Format("2006-01-02")
+		},
+		"perWeek": func(books int, days int) float64 {
+			return float64(books*7) / float64(days)
+		},
+		"makeSlice": func(length int) []int {
+			return make([]int, length)
+		},
+		"reviewLength": func(days [][]goodreads.Review) int {
+			sum := 0
+			for _, day := range days {
+				sum += len(day)
+			}
+			return sum
+		},
+		"inc": func(x int) int {
+			return x + 1
+		},
+		"offset": func(t time.Time) int {
+			return int(t.Weekday())
+		},
+		"pointFor": func(week int, day int) int {
+			return (week * 7) + day
+		},
+		"between": func(point int, offset int, first time.Time, last time.Time) bool {
+			return (point+1) >= (offset+first.Day()) && (point+1) <= (offset+last.Day())
+		},
+		"dateForPoint": func(point int, offset int, first time.Time) time.Time {
+			return first.AddDate(0, 0, (point - offset))
+		},
+		"reviewsFor": func(date time.Time, days [][]goodreads.Review) []goodreads.Review {
+			return days[date.Day()-1]
+		},
+	}
+}
+
 // TODO: simplify! (Break into smaller functions? Define types for slices of reviews?)
 func byMonth(startByMonth time.Time, finish time.Time, reviews []goodreads.Review) [][][]goodreads.Review {
 	currentDate := startByMonth
@@ -147,30 +190,30 @@ func compileSass() *bytes.Reader {
 }
 
 func userShow(client *goodreads.Client, userId string) (*goodreads.User, error) {
-	var userInfo *goodreads.User
-	var err error
-	var ok bool
-
 	key := fmt.Sprintf("UserShow:%s", userId)
 	fromCache, found := c.Get(key)
 
 	if found {
-		userInfo, ok = fromCache.(*goodreads.User)
+		userInfo, ok := fromCache.(*goodreads.User)
 
-		if !ok {
+		// Cached value may be a pointer or not depending on
+		// whether cache came from memory or file
+		if ok {
+			return userInfo, nil
+		} else {
 			tmp := fromCache.(goodreads.User)
-			userInfo = &tmp
+			return &tmp, nil
 		}
 	} else {
-		userInfo, err = client.UserShow(userId)
+		userInfo, err := client.UserShow(userId)
 		if err != nil {
 			return nil, err
 		}
 
 		c.Set(key, userInfo, cache.DefaultExpiration)
-	}
 
-	return userInfo, nil
+		return userInfo, nil
+	}
 }
 
 func reviewPage(client *goodreads.Client, userId string, page int) ([]goodreads.Review, error) {
@@ -284,7 +327,9 @@ func bail(e error) {
 	log.Fatal(e)
 }
 
-// https://github.com/patrickmn/go-cache/pull/16
+// Need to only register gob types once. Taken from
+// https://github.com/patrickmn/go-cache/pull/16. As the mutex isn't
+// public, this can't lock the cache :-(
 func saveFile(fname string) error {
 	fp, err := os.Create(fname)
 	if err != nil {
@@ -318,46 +363,7 @@ func main() {
 	rootUrl = readFile(".root")
 	goodreadsKey = readFile("goodreads.key")
 	userLinkTemplate = uritemplate.MustNew("https://www.goodreads.com/user/show/{user_id}-{user_name}")
-	functionMap = template.FuncMap{
-		"baseUrl":     baseUrl,
-		"thousands":   thousands,
-		"parseTime":   parseTime,
-		"daysBetween": daysBetween,
-		"isoDate": func(t time.Time) string {
-			return t.Format("2006-01-02")
-		},
-		"perWeek": func(books int, days int) float64 {
-			return float64(books*7) / float64(days)
-		},
-		"makeSlice": func(length int) []int {
-			return make([]int, length)
-		},
-		"reviewLength": func(days [][]goodreads.Review) int {
-			sum := 0
-			for _, day := range days {
-				sum += len(day)
-			}
-			return sum
-		},
-		"inc": func(x int) int {
-			return x + 1
-		},
-		"offset": func(t time.Time) int {
-			return int(t.Weekday())
-		},
-		"pointFor": func(week int, day int) int {
-			return (week * 7) + day
-		},
-		"between": func(point int, offset int, first time.Time, last time.Time) bool {
-			return (point+1) >= (offset+first.Day()) && (point+1) <= (offset+last.Day())
-		},
-		"dateForPoint": func(point int, offset int, first time.Time) time.Time {
-			return first.AddDate(0, 0, (point - offset))
-		},
-		"reviewsFor": func(date time.Time, days [][]goodreads.Review) []goodreads.Review {
-			return days[date.Day()-1]
-		},
-	}
+	assignFunctionMap()
 
 	client := goodreads.NewClient(goodreadsKey)
 	r := mux.NewRouter()
