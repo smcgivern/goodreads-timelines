@@ -4,3 +4,4 @@ tmp/
 *.rake
 .root
 goodreads-timelines
+goodreads.cache

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/gob"
 	"fmt"
 	"github.com/KyleBanks/goodreads"
 	"github.com/gorilla/mux"
@@ -14,7 +15,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -68,7 +71,7 @@ func daysBetween(a time.Time, b time.Time) int {
 func parseTime(d string) time.Time {
 	t, err := time.Parse(time.RubyDate, d)
 	if err != nil {
-		log.Fatal(err)
+		bail(err)
 	}
 
 	return t
@@ -122,45 +125,55 @@ func compileSass() *bytes.Reader {
 
 	file, err := os.Open("template/css/style.scss")
 	if err != nil {
-		log.Fatal(err)
+		bail(err)
 	}
 
 	compiler, err := libsass.New(&buffer, file)
 	if err != nil {
-		log.Fatal(err)
+		bail(err)
 	}
 
 	includePaths := []string{"template/css/"}
 	err = compiler.Option(libsass.IncludePaths(includePaths))
 	if err != nil {
-		log.Fatal(err)
+		bail(err)
 	}
 
 	if err := compiler.Run(); err != nil {
-		log.Fatal(err)
+		bail(err)
 	}
 
 	return bytes.NewReader(buffer.Bytes())
 }
 
-func userShow(client *goodreads.Client, userId string) *goodreads.User {
+func userShow(client *goodreads.Client, userId string) (*goodreads.User, error) {
+	var userInfo *goodreads.User
 	var err error
-	key := fmt.Sprintf("UserShow:%s", userId)
-	userInfo, found := c.Get(key)
+	var ok bool
 
-	if !found {
+	key := fmt.Sprintf("UserShow:%s", userId)
+	fromCache, found := c.Get(key)
+
+	if found {
+		userInfo, ok = fromCache.(*goodreads.User)
+
+		if !ok {
+			tmp := fromCache.(goodreads.User)
+			userInfo = &tmp
+		}
+	} else {
 		userInfo, err = client.UserShow(userId)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		c.Set(key, userInfo, cache.DefaultExpiration)
 	}
 
-	return userInfo.(*goodreads.User)
+	return userInfo, nil
 }
 
-func reviewPage(client *goodreads.Client, userId string, page int) []goodreads.Review {
+func reviewPage(client *goodreads.Client, userId string, page int) ([]goodreads.Review, error) {
 	var err error
 	key := fmt.Sprintf("ReviewList:%s:%s", userId, page)
 	reviews, found := c.Get(key)
@@ -168,19 +181,25 @@ func reviewPage(client *goodreads.Client, userId string, page int) []goodreads.R
 	if !found {
 		reviews, err = client.ReviewList(userId, "read", "date_read", "", "a", page, 200)
 		if err != nil {
-			log.Fatal(err)
+			return nil, err
 		}
 
 		c.Set(key, reviews, cache.DefaultExpiration)
 	}
 
-	return reviews.([]goodreads.Review)
+	return reviews.([]goodreads.Review), nil
 }
 
 func timeline(client *goodreads.Client) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := mux.Vars(r)["userId"]
-		userInfo := userShow(client, userId)
+		userInfo, err := userShow(client, userId)
+
+		if err != nil {
+			http.Error(w, "Failed to load user info", http.StatusInternalServerError)
+			return
+		}
+
 		reviews := make([]goodreads.Review, 0)
 		template := template.Must(template.New("layout.html").Funcs(functionMap).ParseFiles("template/layout.html", "template/timeline.html"))
 		vars := uritemplate.Values{}
@@ -189,11 +208,16 @@ func timeline(client *goodreads.Client) func(w http.ResponseWriter, r *http.Requ
 
 		userLink, err := userLinkTemplate.Expand(vars)
 		if err != nil {
-			log.Fatal(err)
+			http.Error(w, "Failed to generate user link", http.StatusInternalServerError)
+			return
 		}
 
 		for page := 1; page < 100; page++ {
-			reviewPage := reviewPage(client, userId, page)
+			reviewPage, err := reviewPage(client, userId, page)
+			if err != nil {
+				http.Error(w, "Failed to get reviews", http.StatusInternalServerError)
+				return
+			}
 
 			if len(reviewPage) == 0 {
 				break
@@ -255,6 +279,33 @@ func stylesheet(buffer *bytes.Reader) func(http.ResponseWriter, *http.Request) {
 	}
 }
 
+func bail(e error) {
+	cleanup()
+	log.Fatal(e)
+}
+
+// https://github.com/patrickmn/go-cache/pull/16
+func saveFile(fname string) error {
+	fp, err := os.Create(fname)
+	if err != nil {
+		return err
+	}
+	enc := gob.NewEncoder(fp)
+	err = enc.Encode(c.Items())
+	if err != nil {
+		fp.Close()
+		return err
+	}
+	return fp.Close()
+}
+
+func cleanup() {
+	err := saveFile("goodreads.cache")
+	if err != nil {
+		log.Println(err)
+	}
+}
+
 func logRequests(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		log.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
@@ -263,9 +314,9 @@ func logRequests(handler http.Handler) http.Handler {
 }
 
 func main() {
+	c = cache.New(24*time.Hour, 10*time.Minute)
 	rootUrl = readFile(".root")
 	goodreadsKey = readFile("goodreads.key")
-	c = cache.New(24*time.Hour, 10*time.Minute)
 	userLinkTemplate = uritemplate.MustNew("https://www.goodreads.com/user/show/{user_id}-{user_name}")
 	functionMap = template.FuncMap{
 		"baseUrl":     baseUrl,
@@ -310,6 +361,22 @@ func main() {
 
 	client := goodreads.NewClient(goodreadsKey)
 	r := mux.NewRouter()
+	channel := make(chan os.Signal)
+
+	gob.Register([]goodreads.Review{})
+	gob.Register(goodreads.User{})
+
+	err := c.LoadFile("goodreads.cache")
+	if err != nil {
+		log.Println(err)
+	}
+
+	signal.Notify(channel, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-channel
+		cleanup()
+		os.Exit(1)
+	}()
 
 	r.HandleFunc(baseUrl("/"), home)
 	r.HandleFunc(baseUrl("/go-to-timeline/"), goToTimeline)
