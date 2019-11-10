@@ -1,7 +1,5 @@
 {{ define "main" }}
 {{ $days := daysBetween .Finish .Start }}
-{{ $calendarWeeks := makeSlice 6 }}
-{{ $calendarDays := makeSlice 7 }}
 <h1>
   <a href="{{ "/" | baseUrl }}">Goodreads timeline</a>
   for user ID
@@ -25,18 +23,14 @@
 </div>
 
 <h2 id="calendars">Monthly reading calendars</h2>
-{{ range $i, $days := .ByMonth }}
+{{ range $i, $weeks := .Calendar }}
 {{ $first := $.StartByMonth.AddDate 0 $i 0 }}
-{{ $next := inc $i }}
-{{ $last := $.StartByMonth.AddDate 0 $next -1 }}
-{{ $offset := $first | offset }}
-{{ $point := 0 }}
 {{ $calendarId := $first.Format "2006-01" | printf "calendar-%s" }}
 <table class="calendar" id="{{ $calendarId }}">
   <caption>
     <h3>
       <a href="#{{ $calendarId }}">{{ $first.Format "January 2006" }}</a>
-      ({{ $days | reviewLength }})
+      ({{ countReviews $weeks $.ReviewsMap}})
     </h3>
   </caption>
   <thead>
@@ -51,18 +45,16 @@
     </tr>
   </thead>
   <tbody>
-    {{ range $week, $_week := $calendarWeeks }}
-    <tr id="{{ $calendarId }}-week-{{ $week | inc }}">
-      {{ range $day, $_day := $calendarDays }}
+    {{ range $j, $week := $weeks }}
+    <tr id="{{ $calendarId }}-week-{{ $j | inc }}">
+      {{ range $day := $week }}
       <td>
-        {{ $point := pointFor $week $day }}
-        {{ if between $point $offset $first $last }}
-        {{ $date := dateForPoint $point $offset $first }}
-        <div class="date" data-date="{{ $date | isoDate }}">
-          {{ $date.Day }}
+        {{ if not $day.IsZero }}
+        <div class="date" data-date="{{ $day | isoDate }}">
+          {{ $day.Day }}
         </div>
         <div class="reviews">
-          {{ $reviews := reviewsFor $date $days }}
+          {{ $reviews := index $.ReviewsMap ($day | isoDate) }}
           {{ range $review := $reviews }}
           <a href="{{ $review.Book.Link }}"
              data-date="{{ $review.ReadAt }}"

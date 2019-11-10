@@ -13,47 +13,50 @@ import (
 	"time"
 )
 
-// TODO: simplify! (Break into smaller functions? Define types for slices of reviews?)
-func byMonth(startByMonth time.Time, finish time.Time, reviews []goodreads.Review) [][][]goodreads.Review {
-	currentDate := startByMonth
-	finishByMonth := time.Date(finish.Year(), finish.Month(), 1, 23, 59, 59, 0, time.UTC).AddDate(0, 1, -1)
-	length := daysBetween(finishByMonth, currentDate) + 1
-	reviewsByMonth := make([][][]goodreads.Review, 1)
-	reviewsByMonth[0] = make([][]goodreads.Review, 1)
-	reviewsByMonth[0][0] = []goodreads.Review{}
-	currentReview := reviews[0]
-	month := 0
-	day := 0
-	review := 0
+func reviewsByDay(reviews []goodreads.Review) map[string][]goodreads.Review {
+	byDay := make(map[string][]goodreads.Review)
 
-	for {
-		dateDiff := currentDate.AddDate(0, 0, 1).Sub(parseTime(currentReview.ReadAt)).Hours()
-
-		if review < len(reviews) && dateDiff > 0 && dateDiff < 24 {
-			dayIndex := currentDate.Day() - 1
-			review++
-			reviewsByMonth[month][dayIndex] = append(reviewsByMonth[month][dayIndex], currentReview)
-
-			if review < len(reviews) {
-				currentReview = reviews[review]
-			}
-		} else {
-			day++
-			currentDate = currentDate.AddDate(0, 0, 1)
-
-			if day == length {
-				break
-			}
-
-			if currentDate.Day() == 1 {
-				month++
-				reviewsByMonth = append(reviewsByMonth, [][]goodreads.Review{})
-			}
-			reviewsByMonth[month] = append(reviewsByMonth[month], []goodreads.Review{})
+	for i := range reviews {
+		review := reviews[i]
+		key := isoDate(parseTime(review.ReadAt))
+		_, ok := byDay[key]
+		if !ok {
+			byDay[key] = make([]goodreads.Review, 0)
 		}
+
+		byDay[key] = append(byDay[key], review)
 	}
 
-	return reviewsByMonth
+	return byDay
+}
+
+func calendar(startByMonth time.Time, finish time.Time) [][][]time.Time {
+	finishByMonth := time.Date(finish.Year(), finish.Month(), 1, 23, 59, 59, 0, time.UTC).AddDate(0, 1, -1)
+	currentDate := startByMonth
+	length := daysBetween(finishByMonth, currentDate) + 1
+	m := -1
+	w := 0
+	months := make([][][]time.Time, 0)
+
+	for i := 0; i < length; i++ {
+		weekday := int(currentDate.Weekday())
+		if currentDate.Day() == 1 {
+			m++
+			w = 0
+			months = append(months, make([][][]time.Time, 1)...)
+			months[m] = append(months[m], make([][]time.Time, 1)...)
+			months[m][w] = make([]time.Time, 7)
+		} else if weekday == 0 {
+			w++
+			months[m] = append(months[m], make([][]time.Time, 1)...)
+			months[m][w] = make([]time.Time, 7)
+		}
+
+		months[m][w][weekday] = currentDate
+		currentDate = currentDate.AddDate(0, 0, 1)
+	}
+
+	return months
 }
 
 func userShow(c *cache.Cache, client *goodreads.Client, userId string) (*goodreads.User, error) {
@@ -155,7 +158,8 @@ func timeline(c *cache.Cache, client *goodreads.Client) func(w http.ResponseWrit
 			Finish:       finish,
 			ReviewLength: reviewLength,
 			StartByMonth: startByMonth,
-			ByMonth:      byMonth(startByMonth, finish, reviews),
+			ReviewsMap:   reviewsByDay(reviews),
+			Calendar:     calendar(startByMonth, finish),
 		}
 
 		err = template.Execute(w, page)

@@ -45,3 +45,7 @@ func parseTime(d string) time.Time {
 
 	return t
 }
+
+func isoDate(t time.Time) string {
+	return t.Format("2006-01-02")
+}

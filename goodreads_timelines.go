@@ -25,7 +25,8 @@ type Page struct {
 	Finish       time.Time
 	ReviewLength int
 	StartByMonth time.Time
-	ByMonth      [][][]goodreads.Review
+	ReviewsMap   map[string][]goodreads.Review
+	Calendar     [][][]time.Time
 }
 
 var c *cache.Cache
@@ -40,39 +41,24 @@ func assignFunctionMap() {
 		"thousands":   thousands,
 		"parseTime":   parseTime,
 		"daysBetween": daysBetween,
-		"isoDate": func(t time.Time) string {
-			return t.Format("2006-01-02")
-		},
+		"isoDate": isoDate,
 		"perWeek": func(books int, days int) float64 {
 			return float64(books*7) / float64(days)
 		},
-		"makeSlice": func(length int) []int {
-			return make([]int, length)
-		},
-		"reviewLength": func(days [][]goodreads.Review) int {
+		"countReviews": func(weeks [][]time.Time, reviewsMap map[string][]goodreads.Review) int {
 			sum := 0
-			for _, day := range days {
-				sum += len(day)
+			for _, week := range weeks {
+				for _, day := range week {
+					if !day.IsZero() {
+						sum += len(reviewsMap[isoDate(day)])
+					}
+				}
 			}
+
 			return sum
 		},
 		"inc": func(x int) int {
 			return x + 1
-		},
-		"offset": func(t time.Time) int {
-			return int(t.Weekday())
-		},
-		"pointFor": func(week int, day int) int {
-			return (week * 7) + day
-		},
-		"between": func(point int, offset int, first time.Time, last time.Time) bool {
-			return (point+1) >= (offset+first.Day()) && (point+1) <= (offset+last.Day())
-		},
-		"dateForPoint": func(point int, offset int, first time.Time) time.Time {
-			return first.AddDate(0, 0, (point - offset))
-		},
-		"reviewsFor": func(date time.Time, days [][]goodreads.Review) []goodreads.Review {
-			return days[date.Day()-1]
 		},
 	}
 }
