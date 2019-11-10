@@ -137,8 +137,9 @@ func timeline(c *cache.Cache, client *goodreads.Client) func(w http.ResponseWrit
 			}
 
 			for i := range reviewPage {
-				if reviewPage[i].ReadAt != "" {
-					reviews = append(reviews, reviewPage[i])
+				review := reviewPage[i]
+				if review.ReadAt != "" && review.ReadCount > 0 {
+					reviews = append(reviews, review)
 				}
 			}
 		}
