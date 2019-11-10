@@ -125,6 +125,11 @@ func main() {
 	client := goodreads.NewClient(goodreadsKey)
 	r := mux.NewRouter()
 	channel := make(chan os.Signal)
+	port, exists := os.LookupEnv("PORT")
+
+	if !exists {
+		port = "8080"
+	}
 
 	gob.Register([]goodreads.Review{})
 	gob.Register(goodreads.User{})
@@ -147,5 +152,5 @@ func main() {
 	r.PathPrefix(baseUrl("/ext/")).Handler(http.StripPrefix(baseUrl("/ext/"), http.FileServer(http.Dir("public/ext"))))
 	r.HandleFunc(baseUrl("/:{userId}/"), timeline(c, client))
 
-	log.Fatal(http.ListenAndServe(":8080", logRequests(r)))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), logRequests(r)))
 }
