@@ -148,7 +148,6 @@ func main() {
 
 	r.HandleFunc(baseUrl("/"), home)
 	r.HandleFunc(baseUrl("/go-to-timeline/"), goToTimeline)
-	r.HandleFunc(baseUrl("/ext/style.css"), stylesheet(compileSass()))
 	r.PathPrefix(baseUrl("/ext/")).Handler(http.StripPrefix(baseUrl("/ext/"), http.FileServer(http.Dir("public/ext"))))
 	r.HandleFunc(baseUrl("/:{userId}/"), timeline(c, client))
 
