@@ -1,7 +1,13 @@
+# Configuration
 goodreads.key
-tmp/
-.sass-cache/
-*.rake
 .root
+*.mk
+
+# Build artifacts
 goodreads-timelines
+goodreads-timelines-linux
+public/ext/style.css
+
+# Caches
+.sass-cache
 goodreads.cache
