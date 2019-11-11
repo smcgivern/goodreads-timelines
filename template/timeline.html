@@ -12,15 +12,15 @@
     <a href="{{ .UserLink }}">{{ .UserInfo.Name }}</a>
   </span>
   has read {{ .ReviewLength | thousands }} books over {{ $days | thousands }}
-  days from {{ .Start | isoDate }} to {{ .Finish | isoDate }}. (That's
+  days from {{ .Start | isoDate }} to {{ .Finish | isoDate }}. (That’s
   around {{ perWeek .ReviewLength $days | printf "%01.2f" }} books per
   week.) There are <a href="#charts">charts</a> and
   <a href="#calendars">calendars</a> available of their reading history.
 </p>
 
 <p>
-  They might have read more or less than this -- all this shows is
-  what they've entered into
+  They might have read more or less than this — all this shows is what
+  they’ve entered into
   <a href="https://www.goodreads.com/">Goodreads</a>.
 </p>
 
