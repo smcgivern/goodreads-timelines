@@ -9,4 +9,4 @@ build: goodreads-timelines public/ext/style.css
 preview: build
 	@./goodreads-timelines
 
-include *.mk
+-include *.mk
