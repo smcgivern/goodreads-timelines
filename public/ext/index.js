@@ -1,3 +1,3 @@
-$('#goodreads-uri').one('focus', function(){
-    $(this).attr('value', '');
+document.querySelector('#goodreads-uri').addEventListener('focus', function() {
+  this.setAttribute('value', '');
 });

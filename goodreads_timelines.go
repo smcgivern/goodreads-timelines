@@ -41,7 +41,7 @@ func assignFunctionMap() {
 		"thousands":   thousands,
 		"parseTime":   parseTime,
 		"daysBetween": daysBetween,
-		"isoDate": isoDate,
+		"isoDate":     isoDate,
 		"perWeek": func(books int, days int) float64 {
 			return float64(books*7) / float64(days)
 		},
@@ -73,7 +73,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 	page := Page{
 		Title:   "Goodreads timelines",
-		Scripts: []string{"/ext/jquery-1.7.min.js", "/ext/index.js"},
+		Scripts: []string{"/ext/index.js"},
 	}
 
 	template.Execute(w, page)
