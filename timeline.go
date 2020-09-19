@@ -152,9 +152,8 @@ func timeline(c *cache.Cache, client *goodreads.Client) func(w http.ResponseWrit
 		page := Page{
 			Title: fmt.Sprintf("Goodreads timeline for %s", userInfo.Name),
 			Scripts: []string{
-				"/ext/moment.min.js", "/ext/Chart.min.js",
 				"/ext/popper.min.js", "/ext/tippy.umd.min.js",
-				"/ext/chart.js",
+				"/ext/Chart.bundle.min.js", "/ext/chart.js",
 			},
 			UserInfo:     *userInfo,
 			UserLink:     userLink,
