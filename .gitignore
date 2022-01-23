@@ -2,6 +2,7 @@
 goodreads.key
 .root
 *.mk
+*.service
 
 # Build artifacts
 goodreads-timelines
